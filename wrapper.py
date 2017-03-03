@@ -23,7 +23,7 @@ def get_crossword_batch(option, dimensions=64):
 		line = line.replace(';',' ')
 		words = line.split()
 		cur_word = words[-1]
-		tuple_list.append((cur_word, words[1:-1]))
+		tuple_list.append((cur_word, words[:-1]))
 
 	return tuple_list
 
@@ -44,6 +44,9 @@ def get_dictionary_batch(option, dimensions=64):
 	for line in lines_batch:
 		while '  ' in line:
 			line = line.replace('  ',' ')
+		# line_words = line.split()
+		# line = ' '.join(line_words)
+
 		line = re.sub("[\(\[].*?[\)\]]", "", line)
 		definitions = re.findall('\d+|\D+',line)
 		definitions = [definition for definition in definitions if not definition.isdigit()]
@@ -56,21 +59,15 @@ def get_dictionary_batch(option, dimensions=64):
 		tokenized_definitions = []
 		for definition in definitions_nopunct:
 			words = definition.split()
-
-			# while 'v' in words: words.remove('v')
-			# while 'n' in words: words.remove('n')
-			# while 'adj' in words: words.remove('adj')
-			# while 'adv' in words: words.remove('adv')
-			# while 'prep' in words: words.remove('prep')
-			# while 'symb' in words: words.remove('symb')
-			# while 'abbr' in words: words.remove('abbr')
-
 			tokenized_definitions.append(words)
 
 		if len(tokenized_definitions) > 0 and len(tokenized_definitions[0]) > 0:
 			cur_word = tokenized_definitions[0][0]
-
-		tokenized_definitions[0] = tokenized_definitions[0][1:]
+		
+		if len(tokenized_definitions) > 1:
+			tokenized_definitions[0] = tokenized_definitions[0][1:]
+		else:
+			#remove
 
 		for definition in tokenized_definitions:
 			if len(definition) >= 2:
