@@ -72,7 +72,9 @@ def get_dictionary_batch(option, dimensions=64):
 				tuple_list.append((cur_word,definition))
 
 	vocabulary = [elem[0] for elem in tuple_list]
-	return vocabulary, tuple_list
+	vocabulary_dict = dict(enumerate(vocabulary))
+	vocabulary_dict = dict((v,k) for k,v in vocabulary_dict.iteritems())
+	return vocabulary_dict, tuple_list
 
 
 
