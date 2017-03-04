@@ -100,6 +100,16 @@ class LSTMModel(Model):
         outputs, state = tf.nn.dynamic_rnn(cell, x, dtype=tf.float32)
         U = tf.get_variable('U', (Config.lstm_dimension, Config.vocab_size),
                             initializer=tf.contrib.layers.xavier_initializer())
+        b2 = tf.Variable(tf.zeros([Config.n_classes]))
+        # CONFUSED ABOUT W DIMENSIONS
+        W = tf.Variable(initializer((Config.n_features * Config.embed_size, Config.vocab_size)))
+        b1 = tf.Variable(tf.zeros([Config.vocab_size]))
+
+        h = tf.nn.softmax(tf.matmul(x, W) + b1)
+        h_drop = tf.nn.dropout(h, dropout_rate)
+
+        pred = tf.matmul(h_drop, U) + b2
+        return pred
 
     def add_loss_op(self, pred):
         new_labels = tf.boolean_mask(self.labels_placeholder, self.mask_placeholder)
