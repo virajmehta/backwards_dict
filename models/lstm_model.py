@@ -96,6 +96,10 @@ class LSTMModel(Model):
     def add_prediction_op(self):
         x = self.add_embedding()
         dropout_rate = self.dropout_placeholder
+        cell = tf.contrib.rnn_cell.LSTMCell(Config.lstm_dimension)
+        outputs, state = tf.nn.dynamic_rnn(cell, x, dtype=tf.float32)
+        U = tf.get_variable('U', (Config.lstm_dimension, Config.vocab_size),
+                            initializer=tf.contrib.layers.xavier_initializer())
 
     def add_loss_op(self, pred):
         new_labels = tf.boolean_mask(self.labels_placeholder, self.mask_placeholder)
@@ -158,6 +162,7 @@ def main():
     config = Config()
     embeddings, tokens = loadWordVectors()
     config.embed_size = embeddings.shape[1]
+    config.vocab_size = len(tokens)
 
     handler = logging.FileHandler(config.log_output)
     handler.setLevel(logging.DEBUG)
