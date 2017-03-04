@@ -71,18 +71,19 @@ def get_dictionary_batch(option, dimensions=64):
 			if len(definition) >= 2:
 				tuple_list.append((cur_word,definition))
 
-	return tuple_list
+	vocabulary = [elem[0] for elem in tuple_list]
+	return vocabulary, tuple_list
 
 
 
 
 def main(argv):
 	if argv[1] == 'dictionary':
-		tuple_list = get_dictionary_batch(argv[2],64)
-		print tuple_list
+		vocabulary, tuple_list = get_dictionary_batch(argv[2],64)
+		# print tuple_list
 	if argv[1] == 'crossword':
 		tuple_list = get_crossword_batch(argv[2],64)
-		print tuple_list
+		# print tuple_list
 	
 
 if __name__ == "__main__":
