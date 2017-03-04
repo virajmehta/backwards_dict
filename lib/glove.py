@@ -1,10 +1,17 @@
 
+import json
 import numpy as np
 
-DEFAULT_FILE_PATH = "utils/datasets/glove.6B.50d.txt"
+VOCAB_FILE_PATH ="lib/vocabulary.txt"
+DEFAULT_FILE_PATH = "word_vectors/glove.6B.50d.txt"
 
-def loadWordVectors(tokens, filepath=DEFAULT_FILE_PATH, dimensions=50):
+def loadWordVectors(vec_file_path=DEFAULT_FILE_PATH,
+                    tok_file_path=VOCAB_FILE_PATH,dimensions=50):
     """Read pretrained GloVe vectors"""
+    f = open(VOCAB_FILE_PATH, 'r')
+    tokens = json.load(f)
+    f.close()
+
     wordVectors = np.zeros((len(tokens), dimensions))
     with open(filepath) as ifs:
         for line in ifs:
@@ -19,4 +26,4 @@ def loadWordVectors(tokens, filepath=DEFAULT_FILE_PATH, dimensions=50):
             if len(data) != dimensions:
                 raise RuntimeError("wrong number of dimensions")
             wordVectors[tokens[token]] = np.asarray(data)
-    return wordVectors
+    return wordVectors, tokens
