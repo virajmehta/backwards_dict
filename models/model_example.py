@@ -1,36 +1,10 @@
-import os
-import time
-import tensorflow as tf
-import cPickle
 
-from model import Model
-from q2_initialization import xavier_weight_init
-from utils.general_utils import Progbar
-from utils.parser_utils import minibatches, load_and_preprocess_data
-
-
-class Config(object):
-    """Holds model hyperparams and data information.
-
-    The config class is used to store various hyperparameters and dataset
-    information parameters. Model objects are passed a Config() object at
-    instantiation.
+class RNNModel(NERModel):
     """
-    n_features = 36
-    n_classes = 3
-    dropout = 0.5
-    embed_size = 50
-    hidden_size = 200
-    batch_size = 2048
-    n_epochs = 10
-    lr = 0.001
-
-
-class ParserModel(Model):
-    """
-    Implements a feedforward neural network with an embedding layer and single hidden layer.
-    This network will predict which transition should be applied to a given partial parse
-    configuration.
+    Implements a recursive neural network with an embedding layer and
+    single hidden layer.
+    This network will predict a sequence of labels (e.g. PER) for a
+    given token (e.g. Henry) using a featurized window around the token.
     """
 
     def add_placeholders(self):
@@ -42,24 +16,33 @@ class ParserModel(Model):
 
         Adds following nodes to the computational graph
 
-        input_placeholder: Input placeholder tensor of  shape (None, n_features), type tf.int32
-        labels_placeholder: Labels placeholder tensor of shape (None, n_classes), type tf.float32
+        input_placeholder: Input placeholder tensor of  shape (None, self.max_length, n_features), type tf.int32
+        labels_placeholder: Labels placeholder tensor of shape (None, self.max_length), type tf.int32
+        mask_placeholder:  Mask placeholder tensor of shape (None, self.max_length), type tf.bool
         dropout_placeholder: Dropout value placeholder (scalar), type tf.float32
 
-        Add these placeholders to self as the instance variables
+        TODO: Add these placeholders to self as the instance variables
             self.input_placeholder
             self.labels_placeholder
+            self.mask_placeholder
             self.dropout_placeholder
+
+        HINTS:
+            - Remember to use self.max_length NOT Config.max_length
 
         (Don't change the variable names)
         """
-        ### YOUR CODE HERE
-        self.input_placeholder = tf.placeholder(tf.int32, shape=(None, Config.n_features))
-        self.labels_placeholder = tf.placeholder(tf.float32, shape=(None, Config.n_classes))
+        ### YOUR CODE HERE (~4-6 lines)
+        self.input_placeholder = tf.placeholder(tf.int32, shape=(None, self.max_length, Config.n_features),
+                                                name='inputs')
+        self.labels_placeholder = tf.placeholder(tf.int32, shape=(None, self.max_length),
+                                                name='labels')
+        self.mask_placeholder = tf.placeholder(tf.bool, shape=(None, self.max_length),
+                                                name='mask')
         self.dropout_placeholder = tf.placeholder(tf.float32)
         ### END YOUR CODE
 
-    def create_feed_dict(self, inputs_batch, labels_batch=None, dropout=1):
+    def create_feed_dict(self, inputs_batch, mask_batch, labels_batch=None, dropout=1):
         """Creates the feed_dict for the dependency parser.
 
         A feed_dict takes the form of:
@@ -69,20 +52,21 @@ class ParserModel(Model):
                 ....
         }
 
-
         Hint: The keys for the feed_dict should be a subset of the placeholder
                     tensors created in add_placeholders.
         Hint: When an argument is None, don't add it to the feed_dict.
 
         Args:
             inputs_batch: A batch of input data.
+            mask_batch:   A batch of mask data.
             labels_batch: A batch of label data.
             dropout: The dropout rate.
         Returns:
             feed_dict: The feed dictionary mapping from placeholders to values.
         """
-        ### YOUR CODE HERE
-        feed_dict = {self.input_placeholder: inputs_batch, self.dropout_placeholder: dropout}
+        ### YOUR CODE (~6-10 lines)
+        feed_dict = {self.input_placeholder : inputs_batch, self.mask_placeholder : mask_batch,
+                     self.dropout_placeholder : dropout}
         if labels_batch is not None:
             feed_dict[self.labels_placeholder] = labels_batch
         ### END YOUR CODE
@@ -91,82 +75,136 @@ class ParserModel(Model):
     def add_embedding(self):
         """Adds an embedding layer that maps from input tokens (integers) to vectors and then
         concatenates those vectors:
-            - Creates an embedding tensor and initializes it with self.pretrained_embeddings.
-            - Uses the input_placeholder to index into the embeddings tensor, resulting in a
-              tensor of shape (None, n_features, embedding_size).
-            - Concatenates the embeddings by reshaping the embeddings tensor to shape
-              (None, n_features * embedding_size).
 
-        Hint: You might find tf.nn.embedding_lookup useful.
-        Hint: You can use tf.reshape to concatenate the vectors. See following link to understand
-            what -1 in a shape means.
-            https://www.tensorflow.org/api_docs/python/array_ops/shapes_and_shaping#reshape.
+        TODO:
+            - Create an embedding tensor and initialize it with self.pretrained_embeddings.
+            - Use the input_placeholder to index into the embeddings tensor, resulting in a
+              tensor of shape (None, max_length, n_features, embed_size).
+            - Concatenates the embeddings by reshaping the embeddings tensor to shape
+              (None, max_length, n_features * embed_size).
+
+        HINTS:
+            - You might find tf.nn.embedding_lookup useful.
+            - You can use tf.reshape to concatenate the vectors. See
+              following link to understand what -1 in a shape means.
+              https://www.tensorflow.org/api_docs/python/array_ops/shapes_and_shaping#reshape.
 
         Returns:
-            embeddings: tf.Tensor of shape (None, n_features*embed_size)
+            embeddings: tf.Tensor of shape (None, max_length, n_features*embed_size)
         """
-        ### YOUR CODE HERE
-        all_embeddings = tf.Variable(initial_value=self.pretrained_embeddings)
-        stacked_embeddings = tf.nn.embedding_lookup(all_embeddings, self.input_placeholder)
-        embeddings = tf.reshape(stacked_embeddings, (-1, Config.n_features * Config.embed_size))
+        ### YOUR CODE HERE (~4-6 lines)
+        all_embeddings = tf.Variable(self.pretrained_embeddings)
+        wordvecs = tf.nn.embedding_lookup(all_embeddings, self.input_placeholder)
+        embeddings = tf.reshape(wordvecs, (-1, Config.max_length, Config.n_features * Config.embed_size))
         ### END YOUR CODE
         return embeddings
 
     def add_prediction_op(self):
-        """Adds the 1-hidden-layer NN:
-            h = Relu(xW + b1)
-            h_drop = Dropout(h, dropout_rate)
-            pred = h_dropU + b2
+        """Adds the unrolled RNN:
+            h_0 = 0
+            for t in 1 to T:
+                o_t, h_t = cell(x_t, h_{t-1})
+                o_drop_t = Dropout(o_t, dropout_rate)
+                y_t = o_drop_t U + b_2
 
-        Note that we are not applying a softmax to pred. The softmax will instead be done in
-        the add_loss_op function, which improves efficiency because we can use
-        tf.nn.softmax_cross_entropy_with_logits
+        TODO: There a quite a few things you'll need to do in this function:
+            - Define the variables U, b_2.
+            - Define the vector h as a constant and inititalize it with
+              zeros. See tf.zeros and tf.shape for information on how
+              to initialize this variable to be of the right shape.
+              https://www.tensorflow.org/api_docs/python/constant_op/constant_value_tensors#zeros
+              https://www.tensorflow.org/api_docs/python/array_ops/shapes_and_shaping#shape
+            - In a for loop, begin to unroll the RNN sequence. Collect
+              the predictions in a list.
+            - When unrolling the loop, from the second iteration
+              onwards, you will HAVE to call
+              tf.get_variable_scope().reuse_variables() so that you do
+              not create new variables in the RNN cell.
+              See https://www.tensorflow.org/versions/master/how_tos/variable_scope/
+            - Concatenate and reshape the predictions into a predictions
+              tensor.
+        Hint: You will find the function tf.pack (similar to np.asarray)
+              useful to assemble a list of tensors into a larger tensor.
+              https://www.tensorflow.org/api_docs/python/array_ops/slicing_and_joining#pack
+        Hint: You will find the function tf.transpose and the perms
+              argument useful to shuffle the indices of the tensor.
+              https://www.tensorflow.org/api_docs/python/array_ops/slicing_and_joining#transpose
 
-        Use the initializer from q2_initialization.py to initialize W and U (you can initialize b1
-        and b2 with zeros)
-
-        Hint: Here are the dimensions of the various variables you will need to create
-                    W:  (n_features*embed_size, hidden_size)
-                    b1: (hidden_size,)
-                    U:  (hidden_size, n_classes)
-                    b2: (n_classes)
-        Hint: Note that tf.nn.dropout takes the keep probability (1 - p_drop) as an argument. 
+        Remember:
+            * Use the xavier initilization for matrices.
+            * Note that tf.nn.dropout takes the keep probability (1 - p_drop) as an argument.
             The keep probability should be set to the value of self.dropout_placeholder
 
         Returns:
-            pred: tf.Tensor of shape (batch_size, n_classes)
+            pred: tf.Tensor of shape (batch_size, max_length, n_classes)
         """
 
         x = self.add_embedding()
-        ### YOUR CODE HERE
-        initializer = xavier_weight_init()
-        W = tf.Variable(initializer((Config.n_features * Config.embed_size, Config.hidden_size)))
-        b1 = tf.Variable(tf.zeros([Config.hidden_size]))
-        U = tf.Variable(initializer((Config.hidden_size, Config.n_classes)))
-        b2 = tf.Variable(tf.zeros([Config.n_classes]))
+        dropout_rate = self.dropout_placeholder
 
-        h = tf.nn.relu(tf.matmul(x, W) + b1)
-        h_drop = tf.nn.dropout(h, self.dropout_placeholder)
+        preds = [] # Predicted output at each timestep should go here!
 
-        pred = tf.matmul(h_drop, U) + b2
+        # Use the cell defined below. For Q2, we will just be using the
+        # RNNCell you defined, but for Q3, we will run this code again
+        # with a GRU cell!
+        if self.config.cell == "rnn":
+            cell = RNNCell(Config.n_features * Config.embed_size, Config.hidden_size)
+        elif self.config.cell == "gru":
+            cell = GRUCell(Config.n_features * Config.embed_size, Config.hidden_size)
+        else:
+            raise ValueError("Unsuppported cell type: " + self.config.cell)
+
+        # Define U and b2 as variables.
+        # Initialize state as vector of zeros.
+        ### YOUR CODE HERE (~4-6 lines)
+        U = tf.get_variable("U", shape=(Config.hidden_size, Config.n_classes),
+                            initializer=tf.contrib.layers.xavier_initializer())
+        b2 = tf.get_variable("b2", shape=(Config.n_classes),
+                             initializer=tf.contrib.layers.xavier_initializer())
+        h = tf.zeros((1, Config.hidden_size))
         ### END YOUR CODE
-        return pred
 
-    def add_loss_op(self, pred):
+        with tf.variable_scope("RNN"):
+            for time_step in range(self.max_length):
+                ### YOUR CODE HERE (~6-10 lines)
+                if time_step > 0:
+                   tf.get_variable_scope().reuse_variables() 
+                o_t, h = cell(x[:,time_step,:], h)
+                o_drop_t = tf.nn.dropout(o_t, self.dropout_placeholder)
+                y_t = tf.matmul(o_drop_t, U) + b2
+                preds.append(y_t)
+                ### END YOUR CODE
+
+        # Make sure to reshape @preds here.
+        preds = tf.pack(preds)
+        preds = tf.transpose(preds, perm=[1,0,2])
+        ### YOUR CODE HERE (~2-4 lines)
+
+        ### END YOUR CODE
+
+        assert preds.get_shape().as_list() == [None, self.max_length, self.config.n_classes], "predictions are not of the right shape. Expected {}, got {}".format([None, self.max_length, self.config.n_classes], preds.get_shape().as_list())
+        return preds
+
+    def add_loss_op(self, preds):
         """Adds Ops for the loss function to the computational graph.
-        In this case we are using cross entropy loss.
-        The loss should be averaged over all examples in the current minibatch.
 
-        Hint: You can use tf.nn.softmax_cross_entropy_with_logits to simplify your
+        TODO: Compute averaged cross entropy loss for the predictions.
+        Importantly, you must ignore the loss for any masked tokens.
+
+        Hint: You might find tf.boolean_mask useful to mask the losses on masked tokens.
+        Hint: You can use tf.nn.sparse_softmax_cross_entropy_with_logits to simplify your
                     implementation. You might find tf.reduce_mean useful.
         Args:
-            pred: A tensor of shape (batch_size, n_classes) containing the output of the neural
+            pred: A tensor of shape (batch_size, max_length, n_classes) containing the output of the neural
                   network before the softmax layer.
         Returns:
             loss: A 0-d tensor (scalar)
         """
-        ### YOUR CODE HERE
-        loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(pred, self.labels_placeholder))
+        ### YOUR CODE HERE (~2-4 lines)
+        new_labels = tf.boolean_mask(self.labels_placeholder, self.mask_placeholder)
+        new_logits = tf.boolean_mask(preds, self.mask_placeholder)
+        ce= tf.nn.sparse_softmax_cross_entropy_with_logits(labels=new_labels, logits=new_logits)
+        loss = tf.reduce_mean(ce)
         ### END YOUR CODE
         return loss
 
@@ -189,92 +227,62 @@ class ParserModel(Model):
         Returns:
             train_op: The Op for training.
         """
-        ### YOUR CODE HERE
+        ### YOUR CODE HERE (~1-2 lines)
         train_op = tf.train.AdamOptimizer().minimize(loss)
         ### END YOUR CODE
         return train_op
 
-    def train_on_batch(self, sess, inputs_batch, labels_batch):
-        feed = self.create_feed_dict(inputs_batch, labels_batch=labels_batch,
-                                     dropout=self.config.dropout)
+    def preprocess_sequence_data(self, examples):
+        def featurize_windows(data, start, end, window_size = 1):
+            """Uses the input sequences in @data to construct new windowed data points.
+            """
+            ret = []
+            for sentence, labels in data:
+                from util import window_iterator
+                sentence_ = []
+                for window in window_iterator(sentence, window_size, beg=start, end=end):
+                    sentence_.append(sum(window, []))
+                ret.append((sentence_, labels))
+            return ret
+
+        examples = featurize_windows(examples, self.helper.START, self.helper.END)
+        return pad_sequences(examples, self.max_length)
+
+    def consolidate_predictions(self, examples_raw, examples, preds):
+        """Batch the predictions into groups of sentence length.
+        """
+        assert len(examples_raw) == len(examples)
+        assert len(examples_raw) == len(preds)
+
+        ret = []
+        for i, (sentence, labels) in enumerate(examples_raw):
+            _, _, mask = examples[i]
+            labels_ = [l for l, m in zip(preds[i], mask) if m] # only select elements of mask.
+            assert len(labels_) == len(labels)
+            ret.append([sentence, labels, labels_])
+        return ret
+
+    def predict_on_batch(self, sess, inputs_batch, mask_batch):
+        feed = self.create_feed_dict(inputs_batch=inputs_batch, mask_batch=mask_batch)
+        predictions = sess.run(tf.argmax(self.pred, axis=2), feed_dict=feed)
+        return predictions
+
+    def train_on_batch(self, sess, inputs_batch, labels_batch, mask_batch):
+        feed = self.create_feed_dict(inputs_batch, labels_batch=labels_batch, mask_batch=mask_batch,
+                                     dropout=Config.dropout)
         _, loss = sess.run([self.train_op, self.loss], feed_dict=feed)
         return loss
 
-    def run_epoch(self, sess, parser, train_examples, dev_set):
-        prog = Progbar(target=1 + len(train_examples) / self.config.batch_size)
-        for i, (train_x, train_y) in enumerate(minibatches(train_examples, self.config.batch_size)):
-            loss = self.train_on_batch(sess, train_x, train_y)
-            prog.update(i + 1, [("train loss", loss)])
-
-        print "Evaluating on dev set",
-        dev_UAS, _ = parser.parse(dev_set)
-        print "- dev UAS: {:.2f}".format(dev_UAS * 100.0)
-        return dev_UAS
-
-    def fit(self, sess, saver, parser, train_examples, dev_set):
-        best_dev_UAS = 0
-        for epoch in range(self.config.n_epochs):
-            print "Epoch {:} out of {:}".format(epoch + 1, self.config.n_epochs)
-            dev_UAS = self.run_epoch(sess, parser, train_examples, dev_set)
-            if dev_UAS > best_dev_UAS:
-                best_dev_UAS = dev_UAS
-                if saver:
-                    print "New best dev UAS! Saving model in ./data/weights/parser.weights"
-                    saver.save(sess, './data/weights/parser.weights')
-            print
-
-    def __init__(self, config, pretrained_embeddings):
+    def __init__(self, helper, config, pretrained_embeddings, report=None):
+        super(RNNModel, self).__init__(helper, config, report)
+        self.max_length = min(Config.max_length, helper.max_length)
+        Config.max_length = self.max_length # Just in case people make a mistake.
         self.pretrained_embeddings = pretrained_embeddings
-        self.config = config
+
+        # Defining placeholders.
+        self.input_placeholder = None
+        self.labels_placeholder = None
+        self.mask_placeholder = None
+        self.dropout_placeholder = None
+
         self.build()
-
-
-def main(debug=False):
-    print 80 * "="
-    print "INITIALIZING"
-    print 80 * "="
-    config = Config()
-    parser, embeddings, train_examples, dev_set, test_set = load_and_preprocess_data(debug)
-    if not os.path.exists('./data/weights/'):
-        os.makedirs('./data/weights/')
-
-    with tf.Graph().as_default():
-        print "Building model...",
-        start = time.time()
-        model = ParserModel(config, embeddings)
-        parser.model = model
-        print "took {:.2f} seconds\n".format(time.time() - start)
-
-        #init = tf.global_variables_initializer()
-        # If you are using an old version of TensorFlow, you may have to use
-        # this initializer instead.
-        init = tf.initialize_all_variables()
-        saver = None if debug else tf.train.Saver()
-
-        with tf.Session() as session:
-            parser.session = session
-            session.run(init)
-
-            print 80 * "="
-            print "TRAINING"
-            print 80 * "="
-            model.fit(session, saver, parser, train_examples, dev_set)
-
-            if not debug:
-                print 80 * "="
-                print "TESTING"
-                print 80 * "="
-                print "Restoring the best model weights found on the dev set"
-                saver.restore(session, './data/weights/parser.weights')
-                print "Final evaluation on test set",
-                UAS, dependencies = parser.parse(test_set)
-                print "- test UAS: {:.2f}".format(UAS * 100.0)
-                print "Writing predictions"
-                with open('q2_test.predicted.pkl', 'w') as f:
-                    cPickle.dump(dependencies, f, -1)
-                print "Done!"
-
-if __name__ == '__main__':
-    main()
-
-
