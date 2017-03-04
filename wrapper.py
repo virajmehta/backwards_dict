@@ -4,8 +4,9 @@ import sys
 import re
 import string
 from itertools import groupby
+import json
 
-def get_crossword_batch(option, dimensions=64, vocabulary_dict):
+def get_crossword_batch(option, dimensions=64):
 	if option == 'train':
 		file_path = 'train.txt'
 	if option == 'test':
@@ -23,8 +24,8 @@ def get_crossword_batch(option, dimensions=64, vocabulary_dict):
 		line = line.replace(';',' ')
 		words = line.split()
 		cur_word = words[-1]
-		if cur_word in vocabulary_dict.keys():
-			tuple_list.append((cur_word, words[:-1]))
+		# if cur_word in vocabulary_dict.keys():
+		tuple_list.append((cur_word, words[:-1]))
 
 	return tuple_list
 
@@ -72,18 +73,32 @@ def get_dictionary_batch(option, dimensions=64):
 			if len(definition) >= 2:
 				tuple_list.append((cur_word,definition))
 
-	vocabulary = [elem[0] for elem in tuple_list]
-	vocabulary_dict = dict(enumerate(vocabulary))
-	vocabulary_dict = dict((v,k) for k,v in vocabulary_dict.iteritems())
-	return vocabulary_dict, tuple_list
+	return tuple_list
+
+def get_all_words(dictionary_path):
+	all_words = []
+	with open(dictionary_path, mode='r') as input_file:
+		lines = list(input_file)
+	for line in lines:
+		words = line.split()
+		if len(words) > 1:
+			all_words.append(words[0])
+	vocabulary = dict(enumerate(all_words))
+	vocabulary_dict = dict((v,k) for k,v in vocabulary.iteritems())
+	dict_file = open('vocabulary.txt','w')
+	json.dump(vocabulary_dict,dict_file)
+	dict_file.close()
+
+	# return vocabulary_dict
+
 
 
 
 
 def main(argv):
-	vocabulary, dict_tuple_list = get_dictionary_batch(argv[2],64)
-	crossword_tuple_list = get_crossword_batch(argv[2],64,vocabulary)
-		# print tuple_list
+	# dict_tuple_list = get_dictionary_batch(argv[2],64)
+	# crossword_tuple_list = get_crossword_batch(argv[2],64,vocabulary)
+	get_all_words('dictionary.txt')
 	
 
 if __name__ == "__main__":
