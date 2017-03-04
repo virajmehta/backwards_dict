@@ -5,7 +5,7 @@ import re
 import string
 from itertools import groupby
 
-def get_crossword_batch(option, dimensions=64):
+def get_crossword_batch(option, dimensions=64, vocabulary_dict):
 	if option == 'train':
 		file_path = 'train.txt'
 	if option == 'test':
@@ -23,7 +23,8 @@ def get_crossword_batch(option, dimensions=64):
 		line = line.replace(';',' ')
 		words = line.split()
 		cur_word = words[-1]
-		tuple_list.append((cur_word, words[:-1]))
+		if cur_word in vocabulary_dict.keys():
+			tuple_list.append((cur_word, words[:-1]))
 
 	return tuple_list
 
@@ -72,17 +73,16 @@ def get_dictionary_batch(option, dimensions=64):
 				tuple_list.append((cur_word,definition))
 
 	vocabulary = [elem[0] for elem in tuple_list]
-	return vocabulary, tuple_list
+	vocabulary_dict = dict(enumerate(vocabulary))
+	vocabulary_dict = dict((v,k) for k,v in vocabulary_dict.iteritems())
+	return vocabulary_dict, tuple_list
 
 
 
 
 def main(argv):
-	if argv[1] == 'dictionary':
-		vocabulary, tuple_list = get_dictionary_batch(argv[2],64)
-		# print tuple_list
-	if argv[1] == 'crossword':
-		tuple_list = get_crossword_batch(argv[2],64)
+	vocabulary, dict_tuple_list = get_dictionary_batch(argv[2],64)
+	crossword_tuple_list = get_crossword_batch(argv[2],64,vocabulary)
 		# print tuple_list
 	
 
