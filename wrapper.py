@@ -64,10 +64,8 @@ def get_dictionary_batch(option, dimensions=64):
 		if len(tokenized_definitions) > 0 and len(tokenized_definitions[0]) > 0:
 			cur_word = tokenized_definitions[0][0]
 		
-		if len(tokenized_definitions) > 1:
+		if len(tokenized_definitions[0]) > 1:
 			tokenized_definitions[0] = tokenized_definitions[0][1:]
-		else:
-			#remove
 
 		for definition in tokenized_definitions:
 			if len(definition) >= 2:
