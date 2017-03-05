@@ -15,11 +15,13 @@ class WrapperClass:
 			crossword_lines = list(input_file)
 		rand.shuffle(crossword_lines)
 		self.crossword_lines = crossword_lines
+		self.num_crossword_examples = len(crossword_lines)
 
 		with open(args.dictionary_file, mode='r') as input_file:
 			dictionary_lines = list(input_file)
 		rand.shuffle(dictionary_lines)
 		self.dictionary_lines = dictionary_lines
+		self.num_dictionary_examples = len(dictionary_lines)
 
 	def get_crossword_batch(option, dimensions=64):
 		lines_batch = self.crossword_lines[WrapperClass.crossword_counter:WrapperClass.crossword_counter+dimensions]
