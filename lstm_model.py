@@ -11,7 +11,7 @@ import os
 
 import numpy as np
 import tensorflow as tf
-from model import Model
+from models.model import Model
 from lib.glove import loadWordVectors
 from data.wrapper_class import WrapperClass
 
@@ -21,22 +21,18 @@ logger.setLevel(logging.DEBUG)
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
 
 class Config(object):
-    self.max_length=40
-    self.embed_size=50
-    self.lstm_dimension=200
-    self.n_features=1
-    self.n_epochs=20
+    max_length=40
+    embed_size=50
+    lstm_dimension=200
+    n_features=1
+    n_epochs=20
     def __init__(self):
         #self.cell = args.cell
 
-        if "output_path" in args:
-            # Where to save things.
-            self.output_path = args.output_path
-        else:
-            self.output_path = "results/{}/{:%Y%m%d_%H%M%S}/".format('lstm', datetime.now())
+        self.output_path = "results/{}/{:%Y%m%d_%H%M%S}".format('lstm', datetime.now())
         self.model_output = self.output_path + "model.weights"
         self.eval_output = self.output_path + "results.txt"
-        self.conll_output = self.output_path + "{}_predictions.conll".format(self.cell)
+        self.conll_output = self.output_path + "{}_predictions.conll".format('lstm')
         self.log_output = self.output_path + "log"
 
 
@@ -73,7 +69,7 @@ def pad_sequences(data, max_length):
 class LSTMModel(Model):
 
     def add_placeholders(self):
-        self.input_placeholder = tf.placeholder(tf.int32, shape=(None, self.max_length, Config.n_features),
+        self.input_placeholder = tf.placeholder(tf.int32, shape=(None, Config.max_length, Config.n_features),
                                                 name='inputs')
         self.labels_placeholder = tf.placeholder(tf.int32, shape=(None,),
                                                 name='labels')
@@ -135,7 +131,7 @@ class LSTMModel(Model):
     def run_epoch(self, sess):
         prog = Progbar(target=1 + data.num_crossword_examples / self.config.batch_size)
         data = WrapperClass()
-        for _ in range(data.num_crossword_examples / self.config.batch_size)
+        for _ in range(data.num_crossword_examples / self.config.batch_size):
             batch = data.get_crossword_batch_batch(dimensions=self.config.batch_size)
             dict_batch = data.get_dictionary_batch(dimensions=self.config.batch_size)
 
@@ -196,19 +192,19 @@ def main():
     logging.getLogger().addHandler(handler)
 
     # TODO: get examples
-    with tf.Graph().as_default():
+    graph = tf.Graph()
+    with graph.as_default():
         logger.info("Building model...",)
         start = time.time()
         model = LSTMModel(config, embeddings, tokens)
         logger.info("took %.2f seconds", time.time() - start)
 
         init = tf.global_variables_initializer()
-        saver = tf.train.Saver()
 
         with tf.Session() as session:
             session.run(init)
-            model.fit(session, saver#TODO:examples)
-                )
+            saver = tf.train.Saver()
+            model.fit(session, saver)
 
             output = model.output(session, dev_raw)
             sentences, labels, predictions = zip(*output)
@@ -220,3 +216,6 @@ def main():
             with open(model.config.eval_output, 'w') as f:
                 for sentence, labels, predictions in output:
                     print_sentence(f, sentence, labels, predictions)
+
+if __name__=='__main__':
+    main()
