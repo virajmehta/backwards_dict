@@ -10,14 +10,25 @@ class WrapperClass:
 	crossword_counter = 0
 	dictionary_counter = 0
 
-	def __init__(self, args):
-		with open(args.crossword_file, mode='r') as input_file:
+	def __init__(self, dataset='train'):
+		crossword_file = None
+		dict_file= None
+		if dataset == 'train':
+			crossword_file = 'train.txt'
+			dict_file = 'dict_train.txt'
+		elif dataset == 'dev':
+			crossword_file = 'dev.txt'
+			dict_file = 'dict_dev.txt'
+		elif dataset == 'test':
+			crossword_file = 'test.txt'
+			dict_file = 'dict_test.txt'
+		with open(crossword_file, mode='r') as input_file:
 			crossword_lines = list(input_file)
 		rand.shuffle(crossword_lines)
 		self.crossword_lines = crossword_lines
 		self.num_crossword_examples = len(crossword_lines)
 
-		with open(args.dictionary_file, mode='r') as input_file:
+		with open(dict_file, mode='r') as input_file:
 			dictionary_lines = list(input_file)
 		rand.shuffle(dictionary_lines)
 		self.dictionary_lines = dictionary_lines
@@ -25,7 +36,7 @@ class WrapperClass:
 
 	def get_crossword_batch(option, dimensions=64):
 		lines_batch = self.crossword_lines[WrapperClass.crossword_counter:WrapperClass.crossword_counter+dimensions]
-		WrapperClass.crossword_counter = WrapperClass.crossword_counter + dimensions 
+		WrapperClass.crossword_counter = WrapperClass.crossword_counter + dimensions
 
 		tuple_list = []
 		for line in lines_batch:

@@ -13,6 +13,7 @@ import numpy as np
 import tensorflow as tf
 from model import Model
 from lib.glove import loadWordVectors
+from data.wrapper_class import WrapperClass
 
 
 logger = logging.getLogger("lstm_model")
@@ -46,7 +47,7 @@ def pad_sequences(data, max_length):
 
     # Use this zero vector when padding sequences.
     zero_vector = [0] * Config.n_features
-    zero_label = 4 # corresponds to the 'O' tag
+    zero_label = -1 # corresponds to the 'O' tag
 
     for sentence, labels in data:
         ### YOUR CODE HERE (~4-6 lines)
@@ -100,15 +101,15 @@ class LSTMModel(Model):
         outputs, state = tf.nn.dynamic_rnn(cell, x, dtype=tf.float32)
         U = tf.get_variable('U', (Config.lstm_dimension, Config.vocab_size),
                             initializer=tf.contrib.layers.xavier_initializer())
-        b2 = tf.Variable(tf.zeros([Config.n_classes]))
+        b2 = tf.get_variable('b2', (Config.n_classes))
         # CONFUSED ABOUT W DIMENSIONS
-        W = tf.Variable(initializer((Config.n_features * Config.embed_size, Config.vocab_size)))
-        b1 = tf.Variable(tf.zeros([Config.vocab_size]))
+        #W = tf.Variable(initializer((Config.n_features * Config.embed_size, Config.vocab_size)))
+        #b1 = tf.Variable(tf.zeros([Config.vocab_size]))
 
-        h = tf.nn.softmax(tf.matmul(x, W) + b1)
-        h_drop = tf.nn.dropout(h, dropout_rate)
+        #h = tf.nn.softmax(tf.matmul(x, W) + b1)
+        #h_drop = tf.nn.dropout(h, dropout_rate)
 
-        pred = tf.matmul(h_drop, U) + b2
+        pred = tf.nn.softmax(tf.matmul(state, U) + b2)
         return pred
 
     def add_loss_op(self, pred):
@@ -120,10 +121,26 @@ class LSTMModel(Model):
     def add_training_op(self, loss):
         return tf.train.AdamOptimizer().minimize(loss)
 
-    def run_epoch(self, sess, train_examples, dev_set):
-        prog = Progbar(target=1 + int(len(train_examples) / self.config.batch_size))
-        for i, batch in enumerate(minibatches(train_examples, self.config.batch_size)):
-            loss = self.train_on_batch(sess, *batch) #TODO
+    def train_on_batch(self, sess, batch):
+        new_batch = pad_sequences(batch)
+        inputs_batch = np.array([[self.tokens[word] for word in example[1]] for example in new_batch])
+        labels_batch = np.array([self.tokens[example[0]]for example in new_batch])
+        mask_batch = np.array([example[2] for example in new_batch])
+        feed = self.create_feed_dict(inputs_batch, labels_batch=labels_batch, mask_batch=mask_batch,
+                                     dropout=Config.dropout)
+        _, loss = sess.run([self.train_op, self.loss], feed_dict=feed)
+        return loss
+
+
+    def run_epoch(self, sess):
+        prog = Progbar(target=1 + data.num_crossword_examples / self.config.batch_size)
+        data = WrapperClass()
+        for _ in range(data.num_crossword_examples / self.config.batch_size)
+            batch = data.get_crossword_batch_batch(dimensions=self.config.batch_size)
+            dict_batch = data.get_dictionary_batch(dimensions=self.config.batch_size)
+
+            loss = self.train_on_batch(sess, batch) #TODO
+            loss += self.train_on_batch(sess, dict_batch)
             prog.update(i + 1, [("train loss", loss)])
             if self.report: self.report.log_train_loss(loss)
         print("")
@@ -136,10 +153,6 @@ class LSTMModel(Model):
 
         #TODO
         logger.info("Evaluating on development data")
-        token_cm, entity_scores = self.evaluate(sess, dev_set, dev_set_raw)
-        logger.debug("Token-level confusion matrix:\n" + token_cm.as_table())
-        logger.debug("Token-level scores:\n" + token_cm.summary())
-        logger.info("Entity level P/R/F1: %.2f/%.2f/%.2f", *entity_scores)
 
         f1 = entity_scores[-1]
         return f1
@@ -161,11 +174,14 @@ class LSTMModel(Model):
                 self.report.save()
         return best_score
 
-    def __init__(self, config, pretrained_embeddings, report=None):
+    def __init__(self, config, pretrained_embeddings, tokens, report=None):
         self.input_placeholder = None
         self.labels_placeholder = None
         self.mask_placeholder = None
         self.dropout_placeholder = None
+        self.config = config
+        self.pretrained_embeddings = pretrained_embeddings
+        self.tokens = tokens
         self.add_placeholders()
 
 def main():
@@ -183,7 +199,7 @@ def main():
     with tf.Graph().as_default():
         logger.info("Building model...",)
         start = time.time()
-        model = LSTMModel(config, embeddings)
+        model = LSTMModel(config, embeddings, tokens)
         logger.info("took %.2f seconds", time.time() - start)
 
         init = tf.global_variables_initializer()
