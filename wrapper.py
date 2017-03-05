@@ -17,7 +17,7 @@ def get_crossword_batch(option, dimensions=64):
 	with open(file_path, mode='r') as input_file:
 		lines = list(input_file)
 	rand.shuffle(lines)
-	lines_batch = lines[0:64]
+	lines_batch = lines[0:dimensions]
 
 	tuple_list = []
 	for line in lines_batch:
@@ -40,7 +40,7 @@ def get_dictionary_batch(option, dimensions=64):
 	with open(file_path, mode='r') as input_file:
 		lines = list(input_file)
 	rand.shuffle(lines)
-	lines_batch = lines[0:64]
+	lines_batch = lines[0:dimensions]
 
 	tuple_list = []
 	for line in lines_batch:

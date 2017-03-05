@@ -1,3 +1,5 @@
+import tensorflow as tf
+
 class Model(object):
     """Abstracts a Tensorflow graph for a learning task.
 
@@ -90,6 +92,13 @@ class Model(object):
         feed = self.create_feed_dict(inputs_batch, labels_batch=labels_batch)
         _, loss = sess.run([self.train_op, self.loss], feed_dict=feed)
         return loss
+
+
+    def length(self, sequence):
+        used = tf.sign(tf.reduce_max(tf.abs(sequence), reduction_indices=2))
+        length = tf.reduce_sum(used, reduction_indices=1)
+        length = tf.cast(length, tf.int32)
+        return length
 
     def predict_on_batch(self, sess, inputs_batch):
         """Make predictions for the provided batch of data
