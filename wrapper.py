@@ -83,8 +83,8 @@ def get_all_words(dictionary_path):
     for line in lines:
         words = line.split()
         if len(words) > 1:
-            if words[0] not in all_words:
-                all_words[words[0]] = index
+            if words[0].lower() not in all_words:
+                all_words[words[0].lower()] = index
                 index += 1
     dict_file = open('vocabulary.txt','w')
     json.dump(all_words,dict_file)
