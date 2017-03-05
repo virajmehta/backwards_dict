@@ -51,6 +51,9 @@ class WrapperClass:
 	def get_dictionary_batch(self, dimensions=64):
 		lines_batch = self.dictionary_lines[WrapperClass.dictionary_counter:WrapperClass.dictionary_counter+dimensions]
 		WrapperClass.dictionary_counter = WrapperClass.dictionary_counter + dimensions
+        if WrapperClass.dictionary_counter > len(self.dictionary_lines):
+            self.dictionary_lines = random.shuffle(self.dictionary_lines)
+            WrapperClass.dictionary_counter = 0
 		
 		tuple_list = []
 		for line in lines_batch:

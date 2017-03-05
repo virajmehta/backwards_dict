@@ -150,7 +150,10 @@ class LSTMModel(Model):
         length_batch = np.array(lengths)
         feed = self.create_feed_dict(inputs_batch1, labels_batch=labels_batch, length_batch=lengths,
                                      dropout=Config.dropout)
-        _, loss = sess.run([self.train_op, self.loss], feed_dict=feed)
+        try:
+            _, loss = sess.run([self.train_op, self.loss], feed_dict=feed)
+        except:
+            import pdb; pdb.set_trace()
         return loss
 
 
@@ -160,6 +163,9 @@ class LSTMModel(Model):
         for _ in range(int(data.num_crossword_examples / self.config.batch_size)):
             batch = data.get_crossword_batch(dimensions=self.config.batch_size)
             dict_batch = data.get_dictionary_batch(dimensions=self.config.batch_size)
+            if len(dict_batch) == 0:
+                import pdb; pdb.set_trace()
+                dict_batch = data.get_dictionary_batch(dimensions=self.config.batch_size)
 
             loss = self.train_on_batch(sess, batch) #TODO
             loss += self.train_on_batch(sess, dict_batch)
