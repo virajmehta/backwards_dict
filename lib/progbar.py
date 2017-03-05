@@ -1,3 +1,4 @@
+import time
 class Progbar(object):
     """
     Progbar class copied from keras (https://github.com/fchollet/keras/)

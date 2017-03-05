@@ -34,7 +34,7 @@ class WrapperClass:
 		self.dictionary_lines = dictionary_lines
 		self.num_dictionary_examples = len(dictionary_lines)
 
-	def get_crossword_batch(option, dimensions=64):
+	def get_crossword_batch(self,  dimensions=64):
 		lines_batch = self.crossword_lines[WrapperClass.crossword_counter:WrapperClass.crossword_counter+dimensions]
 		WrapperClass.crossword_counter = WrapperClass.crossword_counter + dimensions
 
@@ -48,7 +48,7 @@ class WrapperClass:
 
 		return tuple_list
 
-	def get_dictionary_batch(option, dimensions=64):
+	def get_dictionary_batch(self, dimensions=64):
 		lines_batch = self.dictionary_lines[WrapperClass.dictionary_counter:WrapperClass.dictionary_counter+dimensions]
 		WrapperClass.dictionary_counter = WrapperClass.dictionary_counter + dimensions
 		
