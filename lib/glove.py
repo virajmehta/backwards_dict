@@ -13,7 +13,7 @@ def loadWordVectors(vec_file_path=DEFAULT_FILE_PATH,
     f.close()
 
     wordVectors = np.zeros((len(tokens), dimensions))
-    with open(filepath) as ifs:
+    with open(vec_file_path) as ifs:
         for line in ifs:
             line = line.strip()
             if not line:
