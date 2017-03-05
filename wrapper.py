@@ -82,7 +82,7 @@ def get_all_words(dictionary_path):
 	for line in lines:
 		words = line.split()
 		if len(words) > 1:
-			all_words.append(words[0])
+			all_words.append((words[0]).lower())
 	vocabulary = dict(enumerate(all_words))
 	vocabulary_dict = dict((v,k) for k,v in vocabulary.iteritems())
 	dict_file = open('vocabulary.txt','w')
