@@ -76,18 +76,19 @@ def get_dictionary_batch(option, dimensions=64):
 	return tuple_list
 
 def get_all_words(dictionary_path):
-	all_words = []
-	with open(dictionary_path, mode='r') as input_file:
-		lines = list(input_file)
-	for line in lines:
-		words = line.split()
-		if len(words) > 1:
-			all_words.append((words[0]).lower())
-	vocabulary = dict(enumerate(all_words))
-	vocabulary_dict = dict((v,k) for k,v in vocabulary.iteritems())
-	dict_file = open('vocabulary.txt','w')
-	json.dump(vocabulary_dict,dict_file)
-	dict_file.close()
+    all_words = {}
+    index = 0
+    with open(dictionary_path, mode='r') as input_file:
+	    lines = list(input_file)
+    for line in lines:
+        words = line.split()
+        if len(words) > 1:
+            if words[0] not in all_words:
+                all_words[words[0]] = index
+                index += 1
+    dict_file = open('vocabulary.txt','w')
+    json.dump(all_words,dict_file)
+    dict_file.close()
 
 	# return vocabulary_dict
 
