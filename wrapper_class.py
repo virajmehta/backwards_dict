@@ -35,40 +35,40 @@ class WrapperClass:
 
 		return tuple_list
 
-def get_dictionary_batch(option, dimensions=64):
-	lines_batch = self.dictionary_lines[WrapperClass.dictionary_counter:WrapperClass.dictionary_counter+dimensions]
-	WrapperClass.dictionary_counter = WrapperClass.dictionary_counter + dimensions
-	
-	tuple_list = []
-	for line in lines_batch:
-		while '  ' in line:
-			line = line.replace('  ',' ')
-		# line_words = line.split()
-		# line = ' '.join(line_words)
-
-		line = re.sub("[\(\[].*?[\)\]]", "", line)
-		definitions = re.findall('\d+|\D+',line)
-		definitions = [definition for definition in definitions if not definition.isdigit()]
-
-		definitions_nopunct = []
-		for definition in definitions:
-			definition = ''.join(i for i in definition if i not in ('!',',','.','?',':',';'))
-			definitions_nopunct.append(definition)
-
-		tokenized_definitions = []
-		for definition in definitions_nopunct:
-			words = definition.split()
-			tokenized_definitions.append(words)
-
-		if len(tokenized_definitions) > 0 and len(tokenized_definitions[0]) > 0:
-			cur_word = tokenized_definitions[0][0]
+	def get_dictionary_batch(option, dimensions=64):
+		lines_batch = self.dictionary_lines[WrapperClass.dictionary_counter:WrapperClass.dictionary_counter+dimensions]
+		WrapperClass.dictionary_counter = WrapperClass.dictionary_counter + dimensions
 		
-		if len(tokenized_definitions[0]) > 1:
-			tokenized_definitions[0] = tokenized_definitions[0][1:]
+		tuple_list = []
+		for line in lines_batch:
+			while '  ' in line:
+				line = line.replace('  ',' ')
+			# line_words = line.split()
+			# line = ' '.join(line_words)
 
-		for definition in tokenized_definitions:
-			if len(definition) >= 2:
-				tuple_list.append((cur_word,definition))
+			line = re.sub("[\(\[].*?[\)\]]", "", line)
+			definitions = re.findall('\d+|\D+',line)
+			definitions = [definition for definition in definitions if not definition.isdigit()]
 
-	return tuple_list
+			definitions_nopunct = []
+			for definition in definitions:
+				definition = ''.join(i for i in definition if i not in ('!',',','.','?',':',';'))
+				definitions_nopunct.append(definition)
+
+			tokenized_definitions = []
+			for definition in definitions_nopunct:
+				words = definition.split()
+				tokenized_definitions.append(words)
+
+			if len(tokenized_definitions) > 0 and len(tokenized_definitions[0]) > 0:
+				cur_word = tokenized_definitions[0][0]
+			
+			if len(tokenized_definitions[0]) > 1:
+				tokenized_definitions[0] = tokenized_definitions[0][1:]
+
+			for definition in tokenized_definitions:
+				if len(definition) >= 2:
+					tuple_list.append((cur_word,definition))
+
+		return tuple_list
 
