@@ -164,7 +164,6 @@ class LSTMModel(Model):
             batch = data.get_crossword_batch(dimensions=self.config.batch_size)
             dict_batch = data.get_dictionary_batch(dimensions=self.config.batch_size)
             if len(dict_batch) == 0:
-                import pdb; pdb.set_trace()
                 dict_batch = data.get_dictionary_batch(dimensions=self.config.batch_size)
 
             loss = self.train_on_batch(sess, batch) #TODO
@@ -182,8 +181,7 @@ class LSTMModel(Model):
         #TODO
         logger.info("Evaluating on development data")
 
-        f1 = entity_scores[-1]
-        return f1
+        return loss
 
     def fit(self, sess, saver):
         best_score = 0.
@@ -239,10 +237,6 @@ def main():
             saver = tf.train.Saver()
             model.fit(session, saver)
 
-            output = model.output(session, dev_raw)
-            sentences, labels, predictions = zip(*output)
-            predictions = [[LBLS[l] for l in preds] for preds in predictions]
-            output = zip(sentences, labels, predictions)
 
             with open(model.config.conll_output, 'w') as f:
                 write_conll(f, output)
