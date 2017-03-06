@@ -112,6 +112,7 @@ class LSTMModel(Model):
         pred = tf.nn.softmax(tf.matmul(state.c, U) + b2)
         return pred
 
+
     def add_loss_op(self, pred):
         labels = self.labels_placeholder
         logits = pred
@@ -180,8 +181,51 @@ class LSTMModel(Model):
 
         #TODO
         logger.info("Evaluating on development data")
+        accuracy = self.evaluate_dev_set(sess)
+        print 'Accuracy on dev set: {}'.format(accuracy)
+        return accuracy
 
-        return loss
+    def evaluate_dev_set(self, sess):
+        dev = WrapperClass('dev')
+        total_examples = 0.0
+        num_correct= 0.0
+        for _ in range(int(dev.num_crossword_examples / self.config.batch_size)):
+            batch = dev.get_crossword_batch(dimensions=self.config.batch_size)
+            inputs = []
+            labels = []
+            lengths = []
+            for example in batch:
+                input = []
+                for word in example[1][:40]:
+                    try:
+                        input.append(self.tokens[word.lower()])
+                    except:
+                        pass
+                try:
+                    labels.append(self.tokens[example[0].lower()])
+                except:
+                    continue
+                length = len(input)
+                for _ in range(self.config.max_length - length):
+                    input.append(0)
+                inputs.append(input)
+                lengths.append(length)
+            inputs_batch = np.array(inputs)
+            input_shape = list(inputs_batch.shape)
+            input_shape.append(1)
+            inputs_batch1 = np.reshape(inputs_batch, input_shape)
+            length_batch = np.array(lengths)
+            feed = self.create_feed_dict(inputs_batch1, length_batch=lengths,
+                                         dropout=Config.dropout)
+            logits = sess.run([self.pred], feed_dict=feed)[0]
+            pred_labels = np.argmax(logits, axis=1)
+            for _ in range(len(labels)):
+                total_examples += 1
+                if pred_labels[_] == labels[_]:
+                    num_correct += 1
+        accuracy = num_correct / total_examples
+        return accuracy
+        
 
     def fit(self, sess, saver):
         best_score = 0.
