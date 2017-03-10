@@ -12,7 +12,12 @@ def loadWordVectors(vec_file_path=DEFAULT_FILE_PATH,
     tokens = json.load(f)
     f.close()
 
+
     wordVectors = np.zeros((len(tokens), dimensions))
+    words = len(tokens)
+    for token in tokens:
+        if tokens[token] > words:
+            print 'fdasfadsfd;fkajsdfjadsfd;f'
     with open(vec_file_path) as ifs:
         for line in ifs:
             line = line.strip()
@@ -25,5 +30,8 @@ def loadWordVectors(vec_file_path=DEFAULT_FILE_PATH,
             data = [float(x) for x in row[1:]]
             if len(data) != dimensions:
                 raise RuntimeError("wrong number of dimensions")
-            wordVectors[tokens[token]] = np.asarray(data)
+            try:
+                wordVectors[tokens[token]] = np.asarray(data)
+            except:
+                print '{} with index {}'.format(token, tokens[token])
     return wordVectors, tokens

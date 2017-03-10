@@ -28,6 +28,7 @@ class Config(object):
     n_features=1
     n_epochs=20
     batch_size=64
+    dropout=0.5
     def __init__(self):
         #self.cell = args.cell
 
@@ -76,13 +77,13 @@ class LSTMModel(Model):
                                                 name='inputs')
         self.labels_placeholder = tf.placeholder(tf.int32, shape=(None,),
                                                 name='labels')
-        self.mask_placeholder = tf.placeholder(tf.bool, shape=(None,),
-                                                name='mask')
+        self.length_placeholder = tf.placeholder(tf.int32, shape=(None,),
+                                                name='lengths')
         self.dropout_placeholder = tf.placeholder(tf.float32)
 
-    def create_feed_dict(self, inputs_batch, mask_batch, labels_batch=None, dropout=1):
-        feed_dict = {self.input_placeholder : inputs_batch, self.mask_placeholder : mask_batch,
-                     self.dropout_placeholder : dropout}
+    def create_feed_dict(self, inputs_batch, length_batch, labels_batch=None, dropout=1):
+        feed_dict = {self.input_placeholder : inputs_batch,
+                     self.dropout_placeholder : dropout, self.length_placeholder: length_batch}
         if labels_batch is not None:
             feed_dict[self.labels_placeholder] = labels_batch
         return feed_dict
@@ -97,7 +98,7 @@ class LSTMModel(Model):
         x = self.add_embedding()
         dropout_rate = self.dropout_placeholder
         cell = tf.contrib.rnn.LSTMCell(Config.lstm_dimension)
-        outputs, state = tf.nn.dynamic_rnn(cell, x, dtype=tf.float32, sequence_length=self.length(x))
+        outputs, state = tf.nn.dynamic_rnn(cell, x, dtype=tf.float32, sequence_length=self.length_placeholder)
         U = tf.get_variable('U', (self.config.lstm_dimension, self.config.vocab_size),
                             initializer=tf.contrib.layers.xavier_initializer())
         b2 = tf.get_variable('b2', (self.config.vocab_size))
@@ -111,6 +112,7 @@ class LSTMModel(Model):
         pred = tf.nn.softmax(tf.matmul(state.c, U) + b2)
         return pred
 
+
     def add_loss_op(self, pred):
         labels = self.labels_placeholder
         logits = pred
@@ -122,11 +124,37 @@ class LSTMModel(Model):
         return tf.train.AdamOptimizer().minimize(loss)
 
     def train_on_batch(self, sess, batch):
-        inputs_batch = np.array([[self.tokens[word] for word in example[1]] for example in batch])
-        labels_batch = np.array([self.tokens[example[0]]for example in batch])
-        feed = self.create_feed_dict(inputs_batch, labels_batch=labels_batch, mask_batch=None,
+        inputs = []
+        labels = []
+        lengths = []
+        for example in batch:
+            input = []
+            for word in example[1][:40]:
+                try:
+                    input.append(self.tokens[word.lower()])
+                except:
+                    pass
+            try:
+                labels.append(self.tokens[example[0].lower()])
+            except:
+                continue
+            length = len(input)
+            for _ in range(self.config.max_length - length):
+                input.append(0)
+            inputs.append(input)
+            lengths.append(length)
+        inputs_batch = np.array(inputs)
+        input_shape = list(inputs_batch.shape)
+        input_shape.append(1)
+        inputs_batch1 = np.reshape(inputs_batch, input_shape)
+        labels_batch = np.array(labels)
+        length_batch = np.array(lengths)
+        feed = self.create_feed_dict(inputs_batch1, labels_batch=labels_batch, length_batch=lengths,
                                      dropout=Config.dropout)
-        _, loss = sess.run([self.train_op, self.loss], feed_dict=feed)
+        try:
+            _, loss = sess.run([self.train_op, self.loss], feed_dict=feed)
+        except:
+            import pdb; pdb.set_trace()
         return loss
 
 
@@ -136,10 +164,12 @@ class LSTMModel(Model):
         for _ in range(int(data.num_crossword_examples / self.config.batch_size)):
             batch = data.get_crossword_batch(dimensions=self.config.batch_size)
             dict_batch = data.get_dictionary_batch(dimensions=self.config.batch_size)
+            if len(dict_batch) == 0:
+                dict_batch = data.get_dictionary_batch(dimensions=self.config.batch_size)
 
             loss = self.train_on_batch(sess, batch) #TODO
             loss += self.train_on_batch(sess, dict_batch)
-            prog.update(i + 1, [("train loss", loss)])
+            prog.update(_ + 1, [("train loss", loss)])
             if self.report: self.report.log_train_loss(loss)
         print("")
 
@@ -151,9 +181,51 @@ class LSTMModel(Model):
 
         #TODO
         logger.info("Evaluating on development data")
+        accuracy = self.evaluate_dev_set(sess)
+        print 'Accuracy on dev set: {}'.format(accuracy)
+        return accuracy
 
-        f1 = entity_scores[-1]
-        return f1
+    def evaluate_dev_set(self, sess):
+        dev = WrapperClass('dev')
+        total_examples = 0.0
+        num_correct= 0.0
+        for _ in range(int(dev.num_crossword_examples / self.config.batch_size)):
+            batch = dev.get_crossword_batch(dimensions=self.config.batch_size)
+            inputs = []
+            labels = []
+            lengths = []
+            for example in batch:
+                input = []
+                for word in example[1][:40]:
+                    try:
+                        input.append(self.tokens[word.lower()])
+                    except:
+                        pass
+                try:
+                    labels.append(self.tokens[example[0].lower()])
+                except:
+                    continue
+                length = len(input)
+                for _ in range(self.config.max_length - length):
+                    input.append(0)
+                inputs.append(input)
+                lengths.append(length)
+            inputs_batch = np.array(inputs)
+            input_shape = list(inputs_batch.shape)
+            input_shape.append(1)
+            inputs_batch1 = np.reshape(inputs_batch, input_shape)
+            length_batch = np.array(lengths)
+            feed = self.create_feed_dict(inputs_batch1, length_batch=lengths,
+                                         dropout=Config.dropout)
+            logits = sess.run([self.pred], feed_dict=feed)[0]
+            pred_labels = np.argmax(logits, axis=1)
+            for _ in range(len(labels)):
+                total_examples += 1
+                if pred_labels[_] == labels[_]:
+                    num_correct += 1
+        accuracy = num_correct / total_examples
+        return accuracy
+        
 
     def fit(self, sess, saver):
         best_score = 0.
@@ -175,6 +247,7 @@ class LSTMModel(Model):
     def __init__(self, config, pretrained_embeddings, tokens, report=None):
         self.input_placeholder = None
         self.labels_placeholder = None
+        self.report = None
         self.mask_placeholder = None
         self.dropout_placeholder = None
         self.config = config
@@ -208,10 +281,6 @@ def main():
             saver = tf.train.Saver()
             model.fit(session, saver)
 
-            output = model.output(session, dev_raw)
-            sentences, labels, predictions = zip(*output)
-            predictions = [[LBLS[l] for l in preds] for preds in predictions]
-            output = zip(sentences, labels, predictions)
 
             with open(model.config.conll_output, 'w') as f:
                 write_conll(f, output)

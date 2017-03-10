@@ -1,4 +1,7 @@
+import sys
 import time
+import numpy as np
+
 class Progbar(object):
     """
     Progbar class copied from keras (https://github.com/fchollet/keras/)
