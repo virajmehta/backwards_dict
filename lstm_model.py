@@ -164,7 +164,7 @@ class LSTMModel(Model):
         for _ in range(int(data.num_crossword_examples / self.config.batch_size)):
             batch = data.get_crossword_batch(dimensions=self.config.batch_size)
             dict_batch = data.get_dictionary_batch(dimensions=self.config.batch_size)
-            if len(dict_batch) == 0:
+            while len(dict_batch) == 0:
                 dict_batch = data.get_dictionary_batch(dimensions=self.config.batch_size)
 
             loss = self.train_on_batch(sess, batch) #TODO
@@ -182,7 +182,7 @@ class LSTMModel(Model):
         #TODO
         logger.info("Evaluating on development data")
         accuracy = self.evaluate_dev_set(sess)
-        print 'Accuracy on dev set: {}'.format(accuracy)
+        logger.info('Accuracy on dev set: {}'.format(accuracy))
         return accuracy
 
     def evaluate_dev_set(self, sess):
