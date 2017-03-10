@@ -26,7 +26,7 @@ class Config(object):
     embed_size=50
     lstm_dimension=200
     n_features=1
-    n_epochs=20
+    n_epochs=150
     batch_size=64
     dropout=0.5
     def __init__(self):
@@ -266,7 +266,6 @@ def main():
     handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s: %(message)s'))
     logging.getLogger().addHandler(handler)
 
-    # TODO: get examples
     graph = tf.Graph()
     with graph.as_default():
         logger.info("Building model...",)
@@ -281,9 +280,6 @@ def main():
             saver = tf.train.Saver()
             model.fit(session, saver)
 
-
-            with open(model.config.conll_output, 'w') as f:
-                write_conll(f, output)
             with open(model.config.eval_output, 'w') as f:
                 for sentence, labels, predictions in output:
                     print_sentence(f, sentence, labels, predictions)

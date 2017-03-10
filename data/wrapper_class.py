@@ -39,6 +39,9 @@ class WrapperClass:
         if self.crossword_counter > len(self.crossword_lines):
             rand.shuffle(self.crossword_lines)
             self.crossword_counter = 0
+        if len(lines_batch) == 0:
+            lines_batch = self.crossword_lines[self.crossword_counter:self.crossword_counter+dimensions]
+            self.crossword_counter= self.crossword_counter+ dimensions
 
         tuple_list = []
         for line in lines_batch:
@@ -56,7 +59,10 @@ class WrapperClass:
         if self.dictionary_counter > len(self.dictionary_lines):
             rand.shuffle(self.dictionary_lines)
             self.dictionary_counter = 0
-        
+        if len(lines_batch) == 0:
+            lines_batch = self.dictionary_lines[self.dictionary_counter:self.dictionary_counter+dimensions]
+            self.dictionary_counter = self.dictionary_counter + dimensions
+            
         tuple_list = []
         for line in lines_batch:
             while '  ' in line:
