@@ -26,7 +26,7 @@ class Config(object):
     embed_size=50
     lstm_dimension=200
     n_features=1
-    n_epochs=150
+    n_epochs=100
     batch_size=64
     dropout=0.5
     def __init__(self):
@@ -81,7 +81,7 @@ class LSTMModel(Model):
                                                 name='lengths')
         self.dropout_placeholder = tf.placeholder(tf.float32)
 
-    def create_feed_dict(self, inputs_batch, length_batch, labels_batch=None, dropout=1):
+    def create_feed_dict(self, inputs_batch, length_batch, labels_batch=None, dropout=Config.dropout):
         feed_dict = {self.input_placeholder : inputs_batch,
                      self.dropout_placeholder : dropout, self.length_placeholder: length_batch}
         if labels_batch is not None:
@@ -221,7 +221,7 @@ class LSTMModel(Model):
             inputs_batch1 = np.reshape(inputs_batch, input_shape)
             length_batch = np.array(lengths)
             feed = self.create_feed_dict(inputs_batch1, length_batch=lengths,
-                                         dropout=Config.dropout)
+                                         dropout=1)
             logits = sess.run([self.pred], feed_dict=feed)[0]
             pred_labels = np.argmax(logits, axis=1)
             for _ in range(len(labels)):
