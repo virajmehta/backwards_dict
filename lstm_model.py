@@ -123,6 +123,7 @@ class LSTMModel(Model):
     def add_training_op(self, loss):
         return tf.train.AdamOptimizer().minimize(loss)
 
+
     def train_on_batch(self, sess, batch):
         inputs = []
         labels = []
@@ -253,14 +254,10 @@ class LSTMModel(Model):
         self.config = config
         self.pretrained_embeddings = pretrained_embeddings
         self.tokens = tokens
+        self.backwards = None
         self.build()
 
-def main():
-    config = Config()
-    embeddings, tokens = loadWordVectors()
-    config.embed_size = embeddings.shape[1]
-    config.vocab_size = len(tokens)
-
+def main(config, embeddings, tokens):
     handler = logging.FileHandler(config.log_output)
     handler.setLevel(logging.DEBUG)
     handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s: %(message)s'))
@@ -288,5 +285,56 @@ def main():
                 for sentence, labels, predictions in output:
                     print_sentence(f, sentence, labels, predictions)
 
+
+def top10(config, embeddings, tokens):
+    sentence = ''
+    graph = tf.Graph()
+    with graph.as_default():
+        model = LSTMModel(config, embeddings, tokens)
+        with tf.Session() as session:
+            saver = tf.train.Saver()
+            saver.restore(session, model.config.model_output)
+            while True:
+                print 'Input a clue or definition for the backwards dictionary:'
+                try:
+                    sentence = raw_input()
+                except EOFError:
+                    return
+                tokens = sentence.split()
+                input = []
+                for word in tokens:
+                    try:
+                        input.append(model.tokens[word.lower()])
+                    except:
+                        pass
+                inputs_batch = np.array([input])
+                length_batch = np.array([len(input)])
+                input_shape = list(inputs_batch.shape)
+                input_shape.append(1)
+                inputs_batch1 = np.reshape(inputs_batch, input_shape)
+                feed = self.create_feed_dict(inputs_batch1, length_batch=lengths,
+                                         dropout=Config.dropout)
+                logits = sess.run([self.pred], feed_dict=feed)[0]
+                largestindices = np.argpartition(logits, -10)[-10:]
+                top10indices = largestindices[np.argsort(logits[largestindices])][::-1]
+                if model.backwards is None:
+                    model.backwards = dict((v, k) for k, v in model.tokens.iteritems())
+                top10words = [model.backwards[index] for index in top10indices]
+                print 'top 10 guesses'
+                for word in top10words:
+                    print top10words
+
+
+
 if __name__=='__main__':
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-t', action='store_true')
+    x = parser.parse_args()
+    config = Config()
+    embeddings, tokens = loadWordVectors()
+    config.embed_size = embeddings.shape[1]
+    config.vocab_size = len(tokens)
+    if x.t:
+        top10(config, embeddings, tokens)
+    else:
+        main(config, embeddings, tokens)
