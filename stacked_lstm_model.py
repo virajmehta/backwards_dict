@@ -38,6 +38,7 @@ class Config(object):
         self.eval_output = self.output_path + "results.txt"
         self.conll_output = self.output_path + "{}_predictions.conll".format('stacked')
         self.log_output = self.output_path + "log"
+        self.summary_index = 0
 
 
 
@@ -100,30 +101,40 @@ class StackedLSTMModel(Model):
         cell = tf.contrib.rnn.LSTMCell(Config.lstm_dimension)
         stacked_lstm = tf.contrib.rnn.MultiRNNCell([cell]*2)
         outputs, state = tf.nn.dynamic_rnn(stacked_lstm, x, dtype=tf.float32, sequence_length=self.length_placeholder)
-        U = tf.get_variable('U', (self.config.lstm_dimension, self.config.embed_size),
+        with tf.name_scope('U'):
+            U = tf.get_variable('U', (self.config.lstm_dimension, self.config.embed_size),
                             initializer=tf.contrib.layers.xavier_initializer())
-        b1 = tf.get_variable('b1',(self.config.embed_size))
+            tf.summary.histogram('U',U)
+        with tf.name_scope('b1'):
+            b1 = tf.get_variable('b1',(self.config.embed_size))
+            tf.summary.histogram('b1',b1)
         init = tf.cast(tf.transpose(tf.constant(self.pretrained_embeddings)), tf.float32)
-        W = tf.get_variable('W', initializer=init)
-        b2 = tf.get_variable('b2', (self.config.vocab_size))
-        # CONFUSED ABOUT W DIMENSIONS
-        #W = tf.Variable(initializer((Config.n_features * Config.embed_size, Config.vocab_size)))
-        #b1 = tf.Variable(tf.zeros([Config.vocab_size]))
-
-        #h = tf.nn.softmax(tf.matmul(x, W) + b1)
-        #h_drop = tf.nn.dropout(h, dropout_rate)
-	
-	h1 = tf.nn.relu(tf.matmul((state[1]).c,U) + b1)
-        h_drop = tf.nn.dropout(h1, dropout_rate)
-        pred = tf.matmul(h_drop, W) + b2
+        with tf.name_scope('W'):
+            W = tf.get_variable('W', initializer=init)
+            tf.summary.histogram('W',W)
+        with tf.name_scope('b2'):
+            b2 = tf.get_variable('b2', (self.config.vocab_size))
+            tf.summary.histogram('b2',b2)
+        with tf.name_scope('h1'):
+            h1 = tf.nn.relu(tf.matmul((state[1]).c,U) + b1)
+            tf.summary.histogram('h1',h1)
+        with tf.name_scope('h_drop'):
+            h_drop = tf.nn.dropout(h1, dropout_rate)
+            tf.summary.histogram('h_drop',h_drop)
+        with tf.name_scope('pred'):
+            pred = tf.matmul(h_drop, W) + b2
+            tf.summary.histogram('pred',pred)
         return pred
 
 
     def add_loss_op(self, pred):
         labels = self.labels_placeholder
         logits = pred
-        ce= tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels, logits=logits)
-        loss = tf.reduce_mean(ce)
+        with tf.name_scope('ce'):
+            ce= tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels, logits=logits)
+            tf.summary.scalar('ce',ce)
+        with tf.name_scope('loss'):
+            loss = tf.reduce_mean(ce)
         return loss
 
     def add_training_op(self, loss):
@@ -161,8 +172,14 @@ class StackedLSTMModel(Model):
         length_batch = np.array(lengths)
         feed = self.create_feed_dict(inputs_batch1, labels_batch=labels_batch, length_batch=lengths,
                                      dropout=Config.dropout)
+        writer = tf.train.SummaryWriter('results/summary',sess.graph)
+        summary_op = tf.merge_all_summaries()
+
         try:
             _, loss = sess.run([self.train_op, self.loss], feed_dict=feed)
+            _, summary = sess.run([self.train_op, summary_op], feed_dict=feed)
+            writer.add_summary(summary,self.summary_index)
+            self.summary_index = self.summary_index + 1
         except:
             import pdb; pdb.set_trace()
         return loss
@@ -280,6 +297,9 @@ def main():
         logger.info("took %.2f seconds", time.time() - start)
 
         init = tf.global_variables_initializer()
+
+        # writer = tf.train.SummaryWriter('results/summary',graph)
+        # summary_op = tf.merge_all_summaries()
 
         with tf.Session() as session:
             session.run(init)
