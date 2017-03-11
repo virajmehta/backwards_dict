@@ -112,9 +112,10 @@ class StackedLSTMModel(Model):
 
         #h = tf.nn.softmax(tf.matmul(x, W) + b1)
         #h_drop = tf.nn.dropout(h, dropout_rate)
-        h1 = tf.nn.relu(tf.matmul(state.c, U) + b1)
+	
+	h1 = tf.nn.relu(tf.matmul((state[1]).c,U) + b1)
         h_drop = tf.nn.dropout(h1, dropout_rate)
-        pred = tf.matmul(state.c, U) + b2
+        pred = tf.matmul(h_drop, W) + b2
         return pred
 
 
