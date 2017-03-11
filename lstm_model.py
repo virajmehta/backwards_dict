@@ -99,8 +99,11 @@ class LSTMModel(Model):
         dropout_rate = self.dropout_placeholder
         cell = tf.contrib.rnn.LSTMCell(Config.lstm_dimension)
         outputs, state = tf.nn.dynamic_rnn(cell, x, dtype=tf.float32, sequence_length=self.length_placeholder)
-        U = tf.get_variable('U', (self.config.lstm_dimension, self.config.vocab_size),
+        U = tf.get_variable('U', (self.config.lstm_dimension, self.config.embed_size),
                             initializer=tf.contrib.layers.xavier_initializer())
+        b1 = tf.get_variable('b1', (self.config.embed_size))
+        init = tf.cast(tf.transpose(tf.constant(self.pretrained_embeddings)), tf.float32)
+        W = tf.get_variable('W', initializer=init)
         b2 = tf.get_variable('b2', (self.config.vocab_size))
         # CONFUSED ABOUT W DIMENSIONS
         #W = tf.Variable(initializer((Config.n_features * Config.embed_size, Config.vocab_size)))
@@ -109,7 +112,10 @@ class LSTMModel(Model):
         #h = tf.nn.softmax(tf.matmul(x, W) + b1)
         #h_drop = tf.nn.dropout(h, dropout_rate)
 
-        pred = tf.matmul(state.c, U) + b2
+        h1 = tf.relu(tf.matmul(state.c, U) + b1)
+        h_drop = tf.nn.dropout(h, dropout_rate)
+        pred = tf.matmul(h_drop, W) + b2
+
         return pred
 
 
