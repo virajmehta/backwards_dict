@@ -17,7 +17,7 @@ from lib.progbar import Progbar
 from data.wrapper_class import WrapperClass
 
 
-logger = logging.getLogger("lstm_model")
+logger = logging.getLogger("stacked_lstm_model")
 logger.setLevel(logging.DEBUG)
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
 
@@ -33,10 +33,10 @@ class Config(object):
         #self.cell = args.cell
 
         self.vocab_size = None
-        self.output_path = "results/{}/{:%Y%m%d_%H%M%S}".format('lstm', datetime.now())
+        self.output_path = "results/{}/{:%Y%m%d_%H%M%S}".format('stacked', datetime.now())
         self.model_output = self.output_path + "model.weights"
         self.eval_output = self.output_path + "results.txt"
-        self.conll_output = self.output_path + "{}_predictions.conll".format('lstm')
+        self.conll_output = self.output_path + "{}_predictions.conll".format('stacked')
         self.log_output = self.output_path + "log"
 
 
@@ -70,7 +70,7 @@ def pad_sequences(data, max_length):
         ### END YOUR CODE ###
     return ret
 
-class LSTMModel(Model):
+class StackedLSTMModel(Model):
 
     def add_placeholders(self):
         self.input_placeholder = tf.placeholder(tf.int32, shape=(None, Config.max_length, Config.n_features),
@@ -276,7 +276,7 @@ def main():
     with graph.as_default():
         logger.info("Building model...",)
         start = time.time()
-        model = LSTMModel(config, embeddings, tokens)
+        model = StackedLSTMModel(config, embeddings, tokens)
         logger.info("took %.2f seconds", time.time() - start)
 
         init = tf.global_variables_initializer()
