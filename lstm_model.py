@@ -109,7 +109,7 @@ class LSTMModel(Model):
         #h = tf.nn.softmax(tf.matmul(x, W) + b1)
         #h_drop = tf.nn.dropout(h, dropout_rate)
 
-        pred = tf.nn.softmax(tf.matmul(state.c, U) + b2)
+        pred = tf.matmul(state.c, U) + b2
         return pred
 
 
