@@ -129,26 +129,30 @@ class StackedLSTMModel(Model):
     def add_training_op(self, loss):
         return tf.train.AdamOptimizer().minimize(loss)
 
-    def train_on_batch(self, sess, batch):
+    def train_on_batch(self, sess, data, isCrossword):
         inputs = []
         labels = []
         lengths = []
-        for example in batch:
-            input = []
-            for word in example[1][:40]:
+        while len(labels) == 0:
+            batch = data.get_crossword_batch(Config.batch_size) if isCrossword else \
+                    data.get_dictionary_batch(Config.batch_size)
+            for example in batch:
+                input = []
+                for word in example[1][:40]:
+                    try:
+                        input.append(self.tokens[word.lower()])
+                    except:
+                        pass
                 try:
-                    input.append(self.tokens[word.lower()])
+                    labels.append(self.tokens[example[0].lower()])
                 except:
-                    pass
-            try:
-                labels.append(self.tokens[example[0].lower()])
-            except:
-                continue
-            length = len(input)
-            for _ in range(self.config.max_length - length):
-                input.append(0)
-            inputs.append(input)
-            lengths.append(length)
+                    continue
+                length = len(input)
+                for _ in range(self.config.max_length - length):
+                    input.append(0)
+                inputs.append(input)
+                lengths.append(length)
+            
         inputs_batch = np.array(inputs)
         input_shape = list(inputs_batch.shape)
         input_shape.append(1)
