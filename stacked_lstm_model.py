@@ -98,7 +98,7 @@ class StackedLSTMModel(Model):
         x = self.add_embedding()
         dropout_rate = self.dropout_placeholder
         cell = tf.contrib.rnn.LSTMCell(Config.lstm_dimension)
-        stacked_lstm = tf.contrib.rnn.MultiRNNCell(cell*2)
+        stacked_lstm = tf.contrib.rnn.MultiRNNCell([cell]*2)
         outputs, state = tf.nn.dynamic_rnn(stacked_lstm, x, dtype=tf.float32, sequence_length=self.length_placeholder)
         U = tf.get_variable('U', (self.config.lstm_dimension, self.config.embed_size),
                             initializer=tf.contrib.layers.xavier_initializer())
