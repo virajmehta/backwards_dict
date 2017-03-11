@@ -123,26 +123,30 @@ class LSTMModel(Model):
     def add_training_op(self, loss):
         return tf.train.AdamOptimizer().minimize(loss)
 
-    def train_on_batch(self, sess, batch):
+    def train_on_batch(self, sess, data, isCrossword):
         inputs = []
         labels = []
         lengths = []
-        for example in batch:
-            input = []
-            for word in example[1][:40]:
+        while len(labels) == 0:
+            batch = data.get_crossword_batch(Config.batch_size) if isCrossword else \
+                    data.get_dictionary_batch(Config.batch_size)
+            for example in batch:
+                input = []
+                for word in example[1][:40]:
+                    try:
+                        input.append(self.tokens[word.lower()])
+                    except:
+                        pass
                 try:
-                    input.append(self.tokens[word.lower()])
+                    labels.append(self.tokens[example[0].lower()])
                 except:
-                    pass
-            try:
-                labels.append(self.tokens[example[0].lower()])
-            except:
-                continue
-            length = len(input)
-            for _ in range(self.config.max_length - length):
-                input.append(0)
-            inputs.append(input)
-            lengths.append(length)
+                    continue
+                length = len(input)
+                for _ in range(self.config.max_length - length):
+                    input.append(0)
+                inputs.append(input)
+                lengths.append(length)
+            
         inputs_batch = np.array(inputs)
         input_shape = list(inputs_batch.shape)
         input_shape.append(1)
@@ -162,13 +166,8 @@ class LSTMModel(Model):
         data = WrapperClass()
         prog = Progbar(target=1 + data.num_crossword_examples / self.config.batch_size)
         for _ in range(int(data.num_crossword_examples / self.config.batch_size)):
-            batch = data.get_crossword_batch(dimensions=self.config.batch_size)
-            dict_batch = data.get_dictionary_batch(dimensions=self.config.batch_size)
-            while len(dict_batch) == 0:
-                dict_batch = data.get_dictionary_batch(dimensions=self.config.batch_size)
-
-            loss = self.train_on_batch(sess, batch) #TODO
-            loss += self.train_on_batch(sess, dict_batch)
+            loss = self.train_on_batch(sess, data, True) #TODO
+            loss += self.train_on_batch(sess, data, False)
             prog.update(_ + 1, [("train loss", loss)])
             if self.report: self.report.log_train_loss(loss)
         print("")
