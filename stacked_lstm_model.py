@@ -40,6 +40,7 @@ class Config(object):
         self.conll_output = self.output_path + "{}_predictions.conll".format('stacked')
         self.log_output = self.output_path + "log"
         self.summary_index = 0
+        self.summary_path = self.output_path + 'summary'
 
 
 
