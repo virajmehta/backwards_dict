@@ -172,14 +172,16 @@ class StackedLSTMModel(Model):
         length_batch = np.array(lengths)
         feed = self.create_feed_dict(inputs_batch1, labels_batch=labels_batch, length_batch=lengths,
                                      dropout=Config.dropout)
-        writer = tf.train.SummaryWriter('results/summary',sess.graph)
-        summary_op = tf.merge_all_summaries()
+        # writer = tf.summary.FileWriter('results/summary',sess.graph)
+        # summary_op = tf.summary.merge_all()
 
         try:
             _, loss = sess.run([self.train_op, self.loss], feed_dict=feed)
-            _, summary = sess.run([self.train_op, summary_op], feed_dict=feed)
-            writer.add_summary(summary,self.summary_index)
-            self.summary_index = self.summary_index + 1
+            # print "before"
+            # summary = sess.run(summary_op,feed_dict=feed)
+            # print "after"
+            # writer.add_summary(summary,self.summary_index)
+            # self.summary_index = self.summary_index + 1
         except:
             import pdb; pdb.set_trace()
         return loss
@@ -298,13 +300,16 @@ def main():
 
         init = tf.global_variables_initializer()
 
-        # writer = tf.train.SummaryWriter('results/summary',graph)
-        # summary_op = tf.merge_all_summaries()
+        writer = tf.summary.FileWriter('results/summary',graph)
+        summary_op = tf.summary.merge_all()
 
         with tf.Session() as session:
             session.run(init)
             saver = tf.train.Saver()
             model.fit(session, saver)
+
+            summary = session.run(summary_op)
+            writer.add_summary(summary,0)
 
 
             with open(model.config.conll_output, 'w') as f:
