@@ -47,9 +47,10 @@ class WrapperClass:
         for line in lines_batch:
             line = line.replace(';',' ')
             words = line.split()
-            cur_word = words[-1]
-            # if cur_word in vocabulary_dict.keys():
-            tuple_list.append((cur_word, words[:-1]))
+            if len(words) > 0:
+                cur_word = words[-1]
+                # if cur_word in vocabulary_dict.keys():
+                tuple_list.append((cur_word, words[:-1]))
 
         return tuple_list
 

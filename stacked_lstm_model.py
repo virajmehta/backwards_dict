@@ -26,7 +26,7 @@ class Config(object):
     embed_size=50
     lstm_dimension=200
     n_features=1
-    n_epochs=20
+    n_epochs=150
     batch_size=64
     dropout=0.5
     def __init__(self):
