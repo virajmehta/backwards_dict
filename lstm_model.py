@@ -38,6 +38,7 @@ class Config(object):
         self.eval_output = self.output_path + "results.txt"
         self.conll_output = self.output_path + "{}_predictions.conll".format('lstm')
         self.log_output = self.output_path + "log"
+        self.summary_path = self.output_path + 'summary'
 
 
 
@@ -118,13 +119,16 @@ class LSTMModel(Model):
 
         return pred
 
-
     def add_loss_op(self, pred):
         labels = self.labels_placeholder
         logits = pred
-        ce= tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels, logits=logits)
-        loss = tf.reduce_mean(ce)
+        with tf.name_scope('ce'):
+            ce= tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels, logits=logits)
+            tf.summary.scalar('ce',ce)
+        with tf.name_scope('loss'):
+            loss = tf.reduce_mean(ce)
         return loss
+
 
     def add_training_op(self, loss):
         return tf.train.AdamOptimizer().minimize(loss)
@@ -152,7 +156,7 @@ class LSTMModel(Model):
                     input.append(0)
                 inputs.append(input)
                 lengths.append(length)
-            
+
         inputs_batch = np.array(inputs)
         input_shape = list(inputs_batch.shape)
         input_shape.append(1)
@@ -279,11 +283,16 @@ def main():
         logger.info("took %.2f seconds", time.time() - start)
 
         init = tf.global_variables_initializer()
+        writer = tf.summary.FileWriter(config.output_path, graph)
+        summary_op = tf.summary.merge_all()
 
         with tf.Session() as session:
             session.run(init)
             saver = tf.train.Saver()
             model.fit(session, saver)
+
+            summary = session.run(summary_op)
+            writer.add_summary(summary, 0)
 
             with open(model.config.eval_output, 'w') as f:
                 for sentence, labels, predictions in output:
