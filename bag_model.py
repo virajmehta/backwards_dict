@@ -118,7 +118,8 @@ def top10(config, embeddings, tokens):
     graph = tf.Graph()
     with graph.as_default():
         model = BagModel(config, embeddings, tokens)
-        with tf.Session() as session:
+        sess = tf.Session()
+        with sess as session:
             saver = tf.train.Saver()
             saver.restore(session, model.config.saved_input)
             while True:
@@ -134,22 +135,24 @@ def top10(config, embeddings, tokens):
                         input.append(model.tokens[word.lower()])
                     except:
                         pass
-                inputs_batch = np.array([input])
                 length_batch = np.array([len(input)])
+                for _ in range(Config.max_length - len(input)):
+                    input.append(0)
+                inputs_batch = np.array([input])
                 input_shape = list(inputs_batch.shape)
                 input_shape.append(1)
                 inputs_batch1 = np.reshape(inputs_batch, input_shape)
-                feed = model.create_feed_dict(inputs_batch1, length_batch=lengths,
-                                         dropout=Config.dropout)
-                logits = sess.run([model.pred], feed_dict=feed)[0]
+                feed = model.create_feed_dict(inputs_batch1, length_batch=length_batch,
+                                         dropout=1)
+                logits = sess.run([model.pred], feed_dict=feed)[0][0]
                 largestindices = np.argpartition(logits, -10)[-10:]
-                top10indices = largestindices[np.argsort(logits[largestindices])][::-1]
                 if model.backwards is None:
                     model.backwards = dict((v, k) for k, v in model.tokens.iteritems())
-                top10words = [model.backwards[index] for index in top10indices]
+                top10words = [model.backwards[index] for index in largestindices]
+                top10logits  = [logits[index] for index in largestindices]
                 print 'top 10 guesses'
-                for word in top10words:
-                    print top10words
+                for index, word in enumerate(top10words):
+                    print '{}, logit= {}'.format(word, top10logits[index])
 
 
 
