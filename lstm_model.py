@@ -23,10 +23,10 @@ logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
 
 class Config(object):
     max_length=40
-    embed_size=50
+    embed_size=300
     lstm_dimension=200
     n_features=1
-    n_epochs=100
+    n_epochs=200
     batch_size=64
     dropout=0.5
     def __init__(self):
