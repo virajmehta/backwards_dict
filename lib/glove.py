@@ -3,10 +3,10 @@ import json
 import numpy as np
 
 VOCAB_FILE_PATH ="lib/vocabulary.txt"
-DEFAULT_FILE_PATH = "word_vectors/glove.6B.50d.txt"
+DEFAULT_FILE_PATH = "word_vectors/glove.6B.300d.txt"
 
 def loadWordVectors(vec_file_path=DEFAULT_FILE_PATH,
-                    tok_file_path=VOCAB_FILE_PATH,dimensions=50):
+                    tok_file_path=VOCAB_FILE_PATH,dimensions=300):
     """Read pretrained GloVe vectors"""
     f = open(VOCAB_FILE_PATH, 'r')
     tokens = json.load(f)

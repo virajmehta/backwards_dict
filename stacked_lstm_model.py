@@ -25,7 +25,7 @@ logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
 class Config(object):
     max_length=40
     embed_size=50
-    lstm_dimension=200
+    lstm_dimension=300
     n_features=1
     n_epochs=150
     batch_size=64
@@ -79,7 +79,7 @@ class StackedLSTMModel(LSTMModel):
         x = self.add_embedding()
         dropout_rate = self.dropout_placeholder
         cell = tf.contrib.rnn.LSTMCell(Config.lstm_dimension)
-        stacked_lstm = tf.contrib.rnn.MultiRNNCell([cell]*2)
+        stacked_lstm = tf.contrib.rnn.MultiRNNCell([cell]*3)
         outputs, state = tf.nn.dynamic_rnn(stacked_lstm, x, dtype=tf.float32, sequence_length=self.length_placeholder)
         with tf.name_scope('U'):
             U = tf.get_variable('U', (self.config.lstm_dimension, self.config.embed_size),
@@ -96,7 +96,7 @@ class StackedLSTMModel(LSTMModel):
             b2 = tf.get_variable('b2', (self.config.vocab_size))
             tf.summary.histogram('b2',b2)
         with tf.name_scope('h1'):
-            h1 = tf.nn.relu(tf.matmul((state[1]).c,U) + b1)
+            h1 = tf.nn.relu(tf.matmul((state[2]).c,U) + b1)
             tf.summary.histogram('h1',h1)
         with tf.name_scope('h_drop'):
             h_drop = tf.nn.dropout(h1, dropout_rate)
