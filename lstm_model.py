@@ -74,7 +74,7 @@ def pad_sequences(data, max_length):
 class LSTMModel(Model):
 
     def add_placeholders(self):
-        self.input_placeholder = tf.placeholder(tf.int32, shape=(None, Config.max_length, Config.n_features),
+        self.input_placeholder = tf.placeholder(tf.int32, shape=(None, self.config.max_length, self.config.n_features),
                                                 name='inputs')
         self.labels_placeholder = tf.placeholder(tf.int32, shape=(None,),
                                                 name='labels')
@@ -92,13 +92,13 @@ class LSTMModel(Model):
     def add_embedding(self):
         all_embeddings = tf.Variable(self.pretrained_embeddings)
         wordvecs = tf.nn.embedding_lookup(all_embeddings, self.input_placeholder)
-        embeddings = tf.reshape(wordvecs, (-1, Config.max_length, Config.n_features * Config.embed_size))
+        embeddings = tf.reshape(wordvecs, (-1, self.config.max_length, self.config.n_features * self.config.embed_size))
         return tf.cast(embeddings, tf.float32)
 
     def add_prediction_op(self):
         x = self.add_embedding()
         dropout_rate = self.dropout_placeholder
-        cell = tf.contrib.rnn.LSTMCell(Config.lstm_dimension)
+        cell = tf.contrib.rnn.LSTMCell(self.config.lstm_dimension)
         outputs, state = tf.nn.dynamic_rnn(cell, x, dtype=tf.float32, sequence_length=self.length_placeholder)
         U = tf.get_variable('U', (self.config.lstm_dimension, self.config.embed_size),
                             initializer=tf.contrib.layers.xavier_initializer())
@@ -138,8 +138,8 @@ class LSTMModel(Model):
         labels = []
         lengths = []
         while len(labels) == 0:
-            batch = data.get_crossword_batch(Config.batch_size) if isCrossword else \
-                    data.get_dictionary_batch(Config.batch_size)
+            batch = data.get_crossword_batch(self.config.batch_size) if isCrossword else \
+                    data.get_dictionary_batch(self.config.batch_size)
             for example in batch:
                 input = []
                 for word in example[1][:40]:
@@ -164,7 +164,7 @@ class LSTMModel(Model):
         labels_batch = np.array(labels)
         length_batch = np.array(lengths)
         feed = self.create_feed_dict(inputs_batch1, labels_batch=labels_batch, length_batch=lengths,
-                                     dropout=Config.dropout)
+                                     dropout=self.config.dropout)
         try:
             _, loss = sess.run([self.train_op, self.loss], feed_dict=feed)
         except:
