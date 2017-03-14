@@ -37,6 +37,7 @@ class Config(object):
         self.eval_output = self.output_path + "results.txt"
         self.conll_output = self.output_path + "{}_predictions.conll".format('bag')
         self.log_output = self.output_path + "log"
+        self.saved_input = '/Users/virajmehta/Projects/backwards_dict/scr/bag'
 
 
 
@@ -295,7 +296,7 @@ def top10(config, embeddings, tokens):
         model = BagModel(config, embeddings, tokens)
         with tf.Session() as session:
             saver = tf.train.Saver()
-            saver.restore(session, model.config.model_output)
+            saver.restore(session, model.config.saved_input)
             while True:
                 print 'Input a clue or definition for the backwards dictionary:'
                 try:
