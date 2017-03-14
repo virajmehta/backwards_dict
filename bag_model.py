@@ -37,7 +37,7 @@ class Config(object):
         self.eval_output = self.output_path + "results.txt"
         self.conll_output = self.output_path + "{}_predictions.conll".format('bag')
         self.log_output = self.output_path + "log"
-        self.saved_input = '/Users/virajmehta/Projects/backwards_dict/scr/bag'
+        self.saved_input = '/Users/virajmehta/Projects/backwards_dict/scr/bag/20170313_203006model.weights'
 
 
 
@@ -139,9 +139,9 @@ def top10(config, embeddings, tokens):
                 input_shape = list(inputs_batch.shape)
                 input_shape.append(1)
                 inputs_batch1 = np.reshape(inputs_batch, input_shape)
-                feed = self.create_feed_dict(inputs_batch1, length_batch=lengths,
+                feed = model.create_feed_dict(inputs_batch1, length_batch=lengths,
                                          dropout=Config.dropout)
-                logits = sess.run([self.pred], feed_dict=feed)[0]
+                logits = sess.run([model.pred], feed_dict=feed)[0]
                 largestindices = np.argpartition(logits, -10)[-10:]
                 top10indices = largestindices[np.argsort(logits[largestindices])][::-1]
                 if model.backwards is None:
