@@ -261,6 +261,7 @@ class LSTMModel(Model):
         self.dropout_placeholder = None
         self.config = config
         self.pretrained_embeddings = pretrained_embeddings
+        self.backwards = None
         self.tokens = tokens
         self.build()
 
