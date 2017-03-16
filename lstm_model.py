@@ -40,7 +40,7 @@ class Config(object):
         self.conll_output = self.output_path + "{}_predictions.conll".format('lstm')
         self.log_output = self.output_path + "log"
         self.summary_path = self.output_path + 'summary'
-        self.saved_input = '/Users/virajmehta/Projects/backwards_dict/scr/bag/20170313_203006model.weights'
+        self.saved_input = '/home/toast/backwards_dict/results/lstm/20170313_074349model.weights'
 
 
 
@@ -266,9 +266,7 @@ class LSTMModel(Model):
         self.tokens = tokens
         self.build()
 
-def main():
-    config = Config()
-    embeddings, tokens = loadWordVectors()
+def main(config, embeddings, tokens):
     config.embed_size = embeddings.shape[1]
     config.vocab_size = len(tokens)
 
