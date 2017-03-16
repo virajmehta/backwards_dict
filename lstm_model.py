@@ -15,6 +15,7 @@ from models.model import Model
 from lib.glove import loadWordVectors
 from lib.progbar import Progbar
 from data.wrapper_class import WrapperClass
+from test import top10
 
 
 logger = logging.getLogger("lstm_model")
@@ -234,7 +235,6 @@ class LSTMModel(Model):
                     num_correct += 1
         accuracy = num_correct / total_examples
         return accuracy
-        
 
     def fit(self, sess, saver):
         best_score = 0.
@@ -300,4 +300,17 @@ def main():
                     print_sentence(f, sentence, labels, predictions)
 
 if __name__=='__main__':
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-t', action='store_true')
+    x = parser.parse_args()
+    config = Config()
+    embeddings, tokens = loadWordVectors()
+    config.embed_size = embeddings.shape[1]
+    config.vocab_size = len(tokens)
+    if x.t:
+        graph = tf.Graph()
+        with graph.as_default():
+            model = LSTMModel()
+            top10(config, embeddings, tokens, model)
+    else:
+        main(config, embeddings, tokens)

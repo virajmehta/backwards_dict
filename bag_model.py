@@ -15,6 +15,7 @@ from lstm_model import LSTMModel
 from lib.glove import loadWordVectors
 from lib.progbar import Progbar
 from data.wrapper_class import WrapperClass
+from test import top10, eval_test
 
 
 logger = logging.getLogger("bag_model")
@@ -113,58 +114,27 @@ def main(config, embeddings, tokens):
                     print_sentence(f, sentence, labels, predictions)
 
 
-def top10(config, embeddings, tokens):
-    sentence = ''
-    graph = tf.Graph()
-    with graph.as_default():
-        model = BagModel(config, embeddings, tokens)
-        sess = tf.Session()
-        with sess as session:
-            saver = tf.train.Saver()
-            saver.restore(session, model.config.saved_input)
-            while True:
-                print 'Input a clue or definition for the backwards dictionary:'
-                try:
-                    sentence = raw_input()
-                except EOFError:
-                    return
-                tokens = sentence.split()
-                input = []
-                for word in tokens:
-                    try:
-                        input.append(model.tokens[word.lower()])
-                    except:
-                        pass
-                length_batch = np.array([len(input)])
-                for _ in range(Config.max_length - len(input)):
-                    input.append(0)
-                inputs_batch = np.array([input])
-                input_shape = list(inputs_batch.shape)
-                input_shape.append(1)
-                inputs_batch1 = np.reshape(inputs_batch, input_shape)
-                feed = model.create_feed_dict(inputs_batch1, length_batch=length_batch,
-                                         dropout=1)
-                logits = sess.run([model.pred], feed_dict=feed)[0][0]
-                largestindices = np.argpartition(logits, -10)[-10:]
-                if model.backwards is None:
-                    model.backwards = dict((v, k) for k, v in model.tokens.iteritems())
-                top10words = [model.backwards[index] for index in largestindices]
-                top10logits  = [logits[index] for index in largestindices]
-                print 'top 10 guesses'
-                for index, word in enumerate(top10words):
-                    print '{}, logit= {}'.format(word, top10logits[index])
 
 
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-t', action='store_true')
+    parser.add_argument('--top10eval', action='store_true')
     x = parser.parse_args()
     config = Config()
     embeddings, tokens = loadWordVectors()
     config.embed_size = embeddings.shape[1]
     config.vocab_size = len(tokens)
     if x.t:
-        top10(config, embeddings, tokens)
+        graph = tf.Graph()
+        with graph.as_default():
+            model = BagModel(config, embeddings, tokens)
+            top10(config, embeddings, tokens, model)
+    elif x.top10eval:
+        graph = tf.Graph()
+        with graph.as_default():
+            model = BagModel(config, embeddings, tokens)
+            eval_test(embeddings, tokens, model)
     else:
         main(config, embeddings, tokens)
