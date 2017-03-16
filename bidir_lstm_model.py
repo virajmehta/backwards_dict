@@ -76,7 +76,7 @@ def pad_sequences(data, max_length):
 class BidirLSTMModel(LSTMModel):
 
     def add_prediction_op(self):
-        num_layers = 2
+        num_layers = 3
         x = self.add_embedding()
         dropout_rate = self.dropout_placeholder
         with tf.name_scope('fwcell'):
@@ -84,14 +84,18 @@ class BidirLSTMModel(LSTMModel):
         with tf.name_scope('bwcell'):
             bw_cell = tf.contrib.rnn.LSTMCell(Config.lstm_dimension)
         with tf.name_scope('fwmulticell'):
-            fw_multicell = tf.contrib.rnn.MultiRNNCell(fw_cell*num_layers)
+            fw_multicell = tf.contrib.rnn.MultiRNNCell([fw_cell]*num_layers)
         with tf.name_scope('bwmulticell'):
-            bw_multicell = tf.contrib.rnn.MultiRNNCell(bw_cell*num_layers)
+            bw_multicell = tf.contrib.rnn.MultiRNNCell([bw_cell]*num_layers)
         with tf.name_scope('rnn'):
-            outputs, fw_state, bw_state = tf.nn.bidirectional_dynamic_rnn(fw_multicell, bw_multicell, x, dtype=tf.float32, sequence_length=self.length_placeholder)
+            outputs, output_states = tf.nn.bidirectional_dynamic_rnn(fw_multicell, bw_multicell, x, dtype=tf.float32, sequence_length=self.length_placeholder)
             tf.summary.histogram('outputs', outputs)
-        # print tf.shape(fw_state)
-        # print tf.shape(bw_state)
+        fw_state, bw_state = output_states
+        fw_state_last = fw_state[1].c
+        bw_state_last = bw_state[1].c
+        print fw_state_last.get_shape()
+        print fw_state_last
+        concat_states = tf.concat([fw_state_last, bw_state_last], 1)
         with tf.name_scope('U'):
             U = tf.get_variable('U', (self.config.lstm_dimension, self.config.vocab_size),
                             initializer=tf.contrib.layers.xavier_initializer())
@@ -104,7 +108,6 @@ class BidirLSTMModel(LSTMModel):
             W = tf.get_variable("W",(self.config.vocab_size,2*self.config.vocab_size),initializer=tf.contrib.layers.xavier_initializer)
             tf.summary.histogram('W', W)
 
-        concat_states = tf.concat(0, [fw_state.c, bw_state.c])
 
         # W: 0 dimension of forward state, 0 dimension of concat state (batch size by 2 batch size)
 
@@ -125,9 +128,7 @@ class BidirLSTMModel(LSTMModel):
 
 
 
-def main():
-    config = Config()
-    embeddings, tokens = loadWordVectors()
+def main(config, embeddings, tokens):
     config.embed_size = embeddings.shape[1]
     config.vocab_size = len(tokens)
 
