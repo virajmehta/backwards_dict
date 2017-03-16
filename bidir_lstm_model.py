@@ -11,10 +11,11 @@ import os
 
 import numpy as np
 import tensorflow as tf
-from models.model import Model
+from lstm_model import LSTMModel
 from lib.glove import loadWordVectors
 from lib.progbar import Progbar
 from data.wrapper_class import WrapperClass
+from test import top10, eval_test
 
 
 logger = logging.getLogger("bidir")
@@ -26,7 +27,7 @@ class Config(object):
     embed_size=50
     lstm_dimension=200
     n_features=1
-    n_epochs=20
+    n_epochs=200
     batch_size=64
     dropout=0.5
     def __init__(self):
@@ -38,6 +39,8 @@ class Config(object):
         self.eval_output = self.output_path + "results.txt"
         self.conll_output = self.output_path + "{}_predictions.conll".format('bidir')
         self.log_output = self.output_path + "log"
+        self.summary_path = self.output_path + 'summary'
+        self.saved_input = '/Users/virajmehta/Projects/backwards_dict/scr/bag/20170313_203006model.weights'
 
 
 
@@ -70,32 +73,10 @@ def pad_sequences(data, max_length):
         ### END YOUR CODE ###
     return ret
 
-class BidirLSTMModel(Model):
-
-    def add_placeholders(self):
-        self.input_placeholder = tf.placeholder(tf.int32, shape=(None, Config.max_length, Config.n_features),
-                                                name='inputs')
-        self.labels_placeholder = tf.placeholder(tf.int32, shape=(None,),
-                                                name='labels')
-        self.length_placeholder = tf.placeholder(tf.int32, shape=(None,),
-                                                name='lengths')
-        self.dropout_placeholder = tf.placeholder(tf.float32)
-
-    def create_feed_dict(self, inputs_batch, length_batch, labels_batch=None, dropout=1):
-        feed_dict = {self.input_placeholder : inputs_batch,
-                     self.dropout_placeholder : dropout, self.length_placeholder: length_batch}
-        if labels_batch is not None:
-            feed_dict[self.labels_placeholder] = labels_batch
-        return feed_dict
-
-    def add_embedding(self):
-        all_embeddings = tf.Variable(self.pretrained_embeddings)
-        wordvecs = tf.nn.embedding_lookup(all_embeddings, self.input_placeholder)
-        embeddings = tf.reshape(wordvecs, (-1, Config.max_length, Config.n_features * Config.embed_size))
-        return tf.cast(embeddings, tf.float32)
+class BidirLSTMModel(LSTMModel):
 
     def add_prediction_op(self):
-        num_layers = 2
+        num_layers = 3
         x = self.add_embedding()
         dropout_rate = self.dropout_placeholder
         fw_cell = tf.contrib.rnn.LSTMCell(Config.lstm_dimension)
@@ -118,166 +99,56 @@ class BidirLSTMModel(Model):
         concat_states = tf.stack([(fw_state[1]).c, (bw_state[1]).c])
 	concat_states = tf.reshape(concat_states,[-1,Config.lstm_dimension])
 	print concat_states
+        with tf.name_scope('fwcell'):
+            fw_cell = tf.contrib.rnn.LSTMCell(Config.lstm_dimension)
+        with tf.name_scope('bwcell'):
+            bw_cell = tf.contrib.rnn.LSTMCell(Config.lstm_dimension)
+        with tf.name_scope('fwmulticell'):
+            fw_multicell = tf.contrib.rnn.MultiRNNCell([fw_cell]*num_layers)
+        with tf.name_scope('bwmulticell'):
+            bw_multicell = tf.contrib.rnn.MultiRNNCell([bw_cell]*num_layers)
+        with tf.name_scope('rnn'):
+            outputs, output_states = tf.nn.bidirectional_dynamic_rnn(fw_multicell, bw_multicell, x, dtype=tf.float32, sequence_length=self.length_placeholder)
+            tf.summary.histogram('outputs', outputs)
+        fw_state, bw_state = output_states
+        fw_state_last = fw_state[1].c
+        bw_state_last = bw_state[1].c
+        print fw_state_last.get_shape()
+        print fw_state_last
+        concat_states = tf.concat([fw_state_last, bw_state_last], 1)
+        with tf.name_scope('U'):
+            U = tf.get_variable('U', (self.config.lstm_dimension, self.config.vocab_size),
+                            initializer=tf.contrib.layers.xavier_initializer())
+            tf.summary.histogram('U', U)
+        with tf.name_scope('b2'):
+            b2 = tf.get_variable('b2', (self.config.vocab_size))
+            tf.summary.histogram('b2', b2)
+
+        with tf.name_scope('W'):
+            W = tf.get_variable("W",(self.config.vocab_size,2*self.config.vocab_size),initializer=tf.contrib.layers.xavier_initializer)
+            tf.summary.histogram('W', W)
+
 
         # W: 0 dimension of forward state, 0 dimension of concat state (batch size by 2 batch size)
 
-        h = tf.nn.relu(tf.matmul(W,concat_states) + b2)
+        with tf.name_scope('h'):
+            h = tf.nn.relu(tf.matmul(W,concat_states) + b2)
+            tf.summary.histogram('h', h)
         # CONFUSED ABOUT W DIMENSIONS
         #W = tf.Variable(initializer((Config.n_features * Config.embed_size, Config.vocab_size)))
         #b1 = tf.Variable(tf.zeros([Config.vocab_size]))
 
         #h = tf.nn.softmax(tf.matmul(x, W) + b1)
-        #h_drop = tf.nn.dropout(h, dropout_rate)
+        h_drop = tf.nn.dropout(h, dropout_rate)
 
-        pred = tf.matmul(h, U) + b2
+        with tf.name_scope('pred'):
+            pred = tf.matmul(h_drop, U) + b2
+            tf.summary.histogram('pred', pred)
         return pred
 
 
-    def add_loss_op(self, pred):
-        labels = self.labels_placeholder
-        logits = pred
-        ce= tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels, logits=logits)
-        loss = tf.reduce_mean(ce)
-        return loss
 
-    def add_training_op(self, loss):
-        return tf.train.AdamOptimizer().minimize(loss)
-
-    def train_on_batch(self, sess, batch):
-        inputs = []
-        labels = []
-        lengths = []
-        for example in batch:
-            input = []
-            for word in example[1][:40]:
-                try:
-                    input.append(self.tokens[word.lower()])
-                except:
-                    pass
-            try:
-                labels.append(self.tokens[example[0].lower()])
-            except:
-                continue
-            length = len(input)
-            for _ in range(self.config.max_length - length):
-                input.append(0)
-            inputs.append(input)
-            lengths.append(length)
-        inputs_batch = np.array(inputs)
-        input_shape = list(inputs_batch.shape)
-        input_shape.append(1)
-        inputs_batch1 = np.reshape(inputs_batch, input_shape)
-        labels_batch = np.array(labels)
-        length_batch = np.array(lengths)
-        feed = self.create_feed_dict(inputs_batch1, labels_batch=labels_batch, length_batch=lengths,
-                                     dropout=Config.dropout)
-        try:
-            _, loss = sess.run([self.train_op, self.loss], feed_dict=feed)
-        except:
-            import pdb; pdb.set_trace()
-        return loss
-
-
-    def run_epoch(self, sess):
-        data = WrapperClass()
-        prog = Progbar(target=1 + data.num_crossword_examples / self.config.batch_size)
-        for _ in range(int(data.num_crossword_examples / self.config.batch_size)):
-            batch = data.get_crossword_batch(dimensions=self.config.batch_size)
-            dict_batch = data.get_dictionary_batch(dimensions=self.config.batch_size)
-            if len(dict_batch) == 0:
-                dict_batch = data.get_dictionary_batch(dimensions=self.config.batch_size)
-
-            loss = self.train_on_batch(sess, batch) #TODO
-            loss += self.train_on_batch(sess, dict_batch)
-            prog.update(_ + 1, [("train loss", loss)])
-            if self.report: self.report.log_train_loss(loss)
-        print("")
-
-        #logger.info("Evaluating on training data")
-        #token_cm, entity_scores = self.evaluate(sess, train_examples, train_examples_raw)
-        #logger.debug("Token-level confusion matrix:\n" + token_cm.as_table())
-        #logger.debug("Token-level scores:\n" + token_cm.summary())
-        #logger.info("Entity level P/R/F1: %.2f/%.2f/%.2f", *entity_scores)
-
-        #TODO
-        logger.info("Evaluating on development data")
-        accuracy = self.evaluate_dev_set(sess)
-        print 'Accuracy on dev set: {}'.format(accuracy)
-        return accuracy
-
-    def evaluate_dev_set(self, sess):
-        dev = WrapperClass('dev')
-        total_examples = 0.0
-        num_correct= 0.0
-        for _ in range(int(dev.num_crossword_examples / self.config.batch_size)):
-            batch = dev.get_crossword_batch(dimensions=self.config.batch_size)
-            inputs = []
-            labels = []
-            lengths = []
-            for example in batch:
-                input = []
-                for word in example[1][:40]:
-                    try:
-                        input.append(self.tokens[word.lower()])
-                    except:
-                        pass
-                try:
-                    labels.append(self.tokens[example[0].lower()])
-                except:
-                    continue
-                length = len(input)
-                for _ in range(self.config.max_length - length):
-                    input.append(0)
-                inputs.append(input)
-                lengths.append(length)
-            inputs_batch = np.array(inputs)
-            input_shape = list(inputs_batch.shape)
-            input_shape.append(1)
-            inputs_batch1 = np.reshape(inputs_batch, input_shape)
-            length_batch = np.array(lengths)
-            feed = self.create_feed_dict(inputs_batch1, length_batch=lengths,
-                                         dropout=Config.dropout)
-            logits = sess.run([self.pred], feed_dict=feed)[0]
-            pred_labels = np.argmax(logits, axis=1)
-            for _ in range(len(labels)):
-                total_examples += 1
-                if pred_labels[_] == labels[_]:
-                    num_correct += 1
-        accuracy = num_correct / total_examples
-        return accuracy
-        
-
-    def fit(self, sess, saver):
-        best_score = 0.
-
-        for epoch in range(self.config.n_epochs):
-            logger.info("Epoch %d out of %d", epoch + 1, self.config.n_epochs)
-            score = self.run_epoch(sess)
-            if score > best_score:
-                best_score = score
-                if saver:
-                    logger.info("New best score! Saving model in %s", self.config.model_output)
-                    saver.save(sess, self.config.model_output)
-            print("")
-            if self.report:
-                self.report.log_epoch()
-                self.report.save()
-        return best_score
-
-    def __init__(self, config, pretrained_embeddings, tokens, report=None):
-        self.input_placeholder = None
-        self.labels_placeholder = None
-        self.report = None
-        self.mask_placeholder = None
-        self.dropout_placeholder = None
-        self.config = config
-        self.pretrained_embeddings = pretrained_embeddings
-        self.tokens = tokens
-        self.build()
-
-def main():
-    config = Config()
-    embeddings, tokens = loadWordVectors()
+def main(config, embeddings, tokens):
     config.embed_size = embeddings.shape[1]
     config.vocab_size = len(tokens)
 
@@ -309,4 +180,23 @@ def main():
                     print_sentence(f, sentence, labels, predictions)
 
 if __name__=='__main__':
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-t', action='store_true')
+    parser.add_argument('--top10eval', action='store_true')
+    x = parser.parse_args()
+    config = Config()
+    embeddings, tokens = loadWordVectors()
+    config.embed_size = embeddings.shape[1]
+    config.vocab_size = len(tokens)
+    if x.t:
+        graph = tf.Graph()
+        with graph.as_default():
+            model = LSTMModel(config, embeddings, tokens)
+            top10(config, embeddings, tokens, model)
+    elif x.top10eval:
+        graph = tf.Graph()
+        with graph.as_default():
+            model = LSTMModel(config, embeddings, tokens)
+            eval_test(embeddings, tokens, model)
+    else:
+        main(config, embeddings, tokens)

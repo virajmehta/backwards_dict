@@ -15,6 +15,7 @@ from models.model import Model
 from lib.glove import loadWordVectors
 from lib.progbar import Progbar
 from data.wrapper_class import WrapperClass
+from test import top10, eval_test
 
 
 logger = logging.getLogger("lstm_model")
@@ -23,10 +24,10 @@ logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
 
 class Config(object):
     max_length=40
-    embed_size=50
+    embed_size=300
     lstm_dimension=200
     n_features=1
-    n_epochs=100
+    n_epochs=200
     batch_size=64
     dropout=0.5
     def __init__(self):
@@ -38,6 +39,8 @@ class Config(object):
         self.eval_output = self.output_path + "results.txt"
         self.conll_output = self.output_path + "{}_predictions.conll".format('lstm')
         self.log_output = self.output_path + "log"
+        self.summary_path = self.output_path + 'summary'
+        self.saved_input = '/Users/virajmehta/Projects/backwards_dict/scr/bag/20170313_203006model.weights'
 
 
 
@@ -73,7 +76,7 @@ def pad_sequences(data, max_length):
 class LSTMModel(Model):
 
     def add_placeholders(self):
-        self.input_placeholder = tf.placeholder(tf.int32, shape=(None, Config.max_length, Config.n_features),
+        self.input_placeholder = tf.placeholder(tf.int32, shape=(None, self.config.max_length, self.config.n_features),
                                                 name='inputs')
         self.labels_placeholder = tf.placeholder(tf.int32, shape=(None,),
                                                 name='labels')
@@ -91,13 +94,13 @@ class LSTMModel(Model):
     def add_embedding(self):
         all_embeddings = tf.Variable(self.pretrained_embeddings)
         wordvecs = tf.nn.embedding_lookup(all_embeddings, self.input_placeholder)
-        embeddings = tf.reshape(wordvecs, (-1, Config.max_length, Config.n_features * Config.embed_size))
+        embeddings = tf.reshape(wordvecs, (-1, self.config.max_length, self.config.n_features * self.config.embed_size))
         return tf.cast(embeddings, tf.float32)
 
     def add_prediction_op(self):
         x = self.add_embedding()
         dropout_rate = self.dropout_placeholder
-        cell = tf.contrib.rnn.LSTMCell(Config.lstm_dimension)
+        cell = tf.contrib.rnn.LSTMCell(self.config.lstm_dimension)
         outputs, state = tf.nn.dynamic_rnn(cell, x, dtype=tf.float32, sequence_length=self.length_placeholder)
         U = tf.get_variable('U', (self.config.lstm_dimension, self.config.embed_size),
                             initializer=tf.contrib.layers.xavier_initializer())
@@ -118,13 +121,16 @@ class LSTMModel(Model):
 
         return pred
 
-
     def add_loss_op(self, pred):
         labels = self.labels_placeholder
         logits = pred
-        ce= tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels, logits=logits)
-        loss = tf.reduce_mean(ce)
+        with tf.name_scope('ce'):
+            ce= tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels, logits=logits)
+            tf.summary.scalar('ce',ce)
+        with tf.name_scope('loss'):
+            loss = tf.reduce_mean(ce)
         return loss
+
 
     def add_training_op(self, loss):
         return tf.train.AdamOptimizer().minimize(loss)
@@ -134,8 +140,8 @@ class LSTMModel(Model):
         labels = []
         lengths = []
         while len(labels) == 0:
-            batch = data.get_crossword_batch(Config.batch_size) if isCrossword else \
-                    data.get_dictionary_batch(Config.batch_size)
+            batch = data.get_crossword_batch(self.config.batch_size) if isCrossword else \
+                    data.get_dictionary_batch(self.config.batch_size)
             for example in batch:
                 input = []
                 for word in example[1][:40]:
@@ -152,7 +158,7 @@ class LSTMModel(Model):
                     input.append(0)
                 inputs.append(input)
                 lengths.append(length)
-            
+
         inputs_batch = np.array(inputs)
         input_shape = list(inputs_batch.shape)
         input_shape.append(1)
@@ -160,7 +166,7 @@ class LSTMModel(Model):
         labels_batch = np.array(labels)
         length_batch = np.array(lengths)
         feed = self.create_feed_dict(inputs_batch1, labels_batch=labels_batch, length_batch=lengths,
-                                     dropout=Config.dropout)
+                                     dropout=self.config.dropout)
         try:
             _, loss = sess.run([self.train_op, self.loss], feed_dict=feed)
         except:
@@ -230,7 +236,6 @@ class LSTMModel(Model):
                     num_correct += 1
         accuracy = num_correct / total_examples
         return accuracy
-        
 
     def fit(self, sess, saver):
         best_score = 0.
@@ -257,6 +262,7 @@ class LSTMModel(Model):
         self.dropout_placeholder = None
         self.config = config
         self.pretrained_embeddings = pretrained_embeddings
+        self.backwards = None
         self.tokens = tokens
         self.build()
 
@@ -279,15 +285,39 @@ def main():
         logger.info("took %.2f seconds", time.time() - start)
 
         init = tf.global_variables_initializer()
+        writer = tf.summary.FileWriter(config.output_path, graph)
+        summary_op = tf.summary.merge_all()
 
         with tf.Session() as session:
             session.run(init)
             saver = tf.train.Saver()
             model.fit(session, saver)
 
+            summary = session.run(summary_op)
+            writer.add_summary(summary, 0)
+
             with open(model.config.eval_output, 'w') as f:
                 for sentence, labels, predictions in output:
                     print_sentence(f, sentence, labels, predictions)
 
 if __name__=='__main__':
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-t', action='store_true')
+    parser.add_argument('--top10eval', action='store_true')
+    x = parser.parse_args()
+    config = Config()
+    embeddings, tokens = loadWordVectors()
+    config.embed_size = embeddings.shape[1]
+    config.vocab_size = len(tokens)
+    if x.t:
+        graph = tf.Graph()
+        with graph.as_default():
+            model = LSTMModel(config, embeddings, tokens)
+            top10(config, embeddings, tokens, model)
+    elif x.top10eval:
+        graph = tf.Graph()
+        with graph.as_default():
+            model = LSTMModel(config, embeddings, tokens)
+            eval_test(embeddings, tokens, model)
+    else:
+        main(config, embeddings, tokens)
