@@ -48,7 +48,7 @@ def top10(config, embeddings, tokens, model):
 
 def isCorrectChar(truth, prediction, index):
     if len(truth) != len(prediction):
-        return false
+        return False
     return prediction[index] == truth[index]
 
 def isCorrectLength(truth, prediction):
@@ -110,14 +110,14 @@ def eval_test(embeddings, tokens, model):
                 truth =  model.backwards[labels[_]]
                 char_index = randrange(len(truth))
                 found_length = False
-                for _, index in enumerate(largest50indices):
+                for _, index in enumerate(largest50indices[_,:]):
                     if isCorrectLength(truth, model.backwards[index]):
                         if index == labels[_] and not found_length:
                             if _ < 10:
                                 top_10_length_correct += 1
                             top_50_length_correct += 1
                         found_length = True
-                    if isCorrectChar(truth, model.backwards[index]):
+                    if isCorrectChar(truth, model.backwards[index], char_index):
                         if index == labels[_]:
                             if _ < 10:
                                 top_10_char_correct += 1
