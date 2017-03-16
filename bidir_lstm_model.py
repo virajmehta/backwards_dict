@@ -30,6 +30,7 @@ class Config(object):
     n_epochs=200
     batch_size=64
     dropout=0.5
+    fc_size=300
     def __init__(self):
         #self.cell = args.cell
 
@@ -79,7 +80,7 @@ class BidirLSTMModel(LSTMModel):
         num_layers = 3
         x = self.add_embedding()
         dropout_rate = self.dropout_placeholder
-	
+    
         fw_cell = tf.contrib.rnn.LSTMCell(Config.lstm_dimension)
         bw_cell = tf.contrib.rnn.LSTMCell(Config.lstm_dimension)
         fw_multicell = tf.contrib.rnn.MultiRNNCell([fw_cell]*num_layers)
@@ -89,14 +90,13 @@ class BidirLSTMModel(LSTMModel):
         fw_state, bw_state = output_states
         fw_state_last = fw_state[1].c
         bw_state_last = bw_state[1].c
-        print fw_state_last.get_shape()
         concat_states = tf.concat([fw_state_last, bw_state_last], 1)
-        U = tf.get_variable('U', (2*Config.lstm_dimension, self.config.vocab_size),
+        U = tf.get_variable('U', (2*Config.lstm_dimension, self.config.fc_size),
                             initializer=tf.contrib.layers.xavier_initializer())
-        b2 = tf.get_variable('b2', (1,self.config.vocab_size))
-	b1 = tf.get_variable('b1',(Config.n_features * Config.embed_size, 1))
+        b2 = tf.get_variable('b2', (1,self.config.fc_size))
+        b1 = tf.get_variable('b1',(self.config.vocab_size))
 
-        W = tf.get_variable("W",(Config.n_features * Config.embed_size,self.config.vocab_size),initializer=tf.contrib.layers.xavier_initializer())
+        W = tf.get_variable("W",(self.config.fc_size, self.config.vocab_size),initializer=tf.contrib.layers.xavier_initializer())
 
 
         # W: 0 dimension of forward state, 0 dimension of concat state (batch size by 2 batch size)
@@ -106,9 +106,9 @@ class BidirLSTMModel(LSTMModel):
         h_drop = tf.nn.dropout(h, dropout_rate)
 
 
-        pred = tf.matmul(W,tf.transpose(h_drop)) + b1
-	pred = tf.transpose(pred)
+        pred = tf.matmul(h_drop, W) + b1
 
+    
         return pred
 
 
