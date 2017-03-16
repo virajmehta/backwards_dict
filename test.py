@@ -2,6 +2,7 @@ from __future__ import division
 import numpy as np
 import tensorflow as tf
 
+from random import randrange
 from data.wrapper_class import WrapperClass
 from lib.progbar import Progbar
 
@@ -44,6 +45,16 @@ def top10(config, embeddings, tokens, model):
             for index, word in enumerate(top10words):
                 print '{}, logit= {}'.format(word, top10logits[index])
 
+
+def isCorrectChar(truth, prediction, index):
+    if len(truth) != len(prediction):
+        return false
+    return prediction[index] == truth[index]
+
+def isCorrectLength(truth, prediction):
+    return len(truth) == len(prediction)
+
+
 def eval_test(embeddings, tokens, model):
     with tf.Session() as sess:
         saver = tf.train.Saver()
@@ -52,6 +63,10 @@ def eval_test(embeddings, tokens, model):
         total_examples = 0.0
         num_correct= 0.0
         top_10_num_correct = 0.0
+        top_10_length_correct = 0.0
+        top_10_char_correct = 0.0
+        top_50_length_correct = 0.0
+        top_50_char_correct = 0.0
         for _ in range(int(test.num_crossword_examples / model.config.batch_size)):
             batch = test.get_crossword_batch(dimensions=model.config.batch_size)
             inputs = []
@@ -81,16 +96,43 @@ def eval_test(embeddings, tokens, model):
             feed = model.create_feed_dict(inputs_batch1, length_batch=lengths,
                                          dropout=1)
             logits = sess.run([model.pred], feed_dict=feed)[0]
-            largestindices = np.argpartition(logits, -10, axis=1)[:,-10:]
+            largest10indices = np.argpartition(logits, -10, axis=1)[:,-10:]
+            largest50indices = np.argpartition(logits, -10, axis=1)[:,-10:]
             pred_labels = np.argmax(logits, axis=1)
             for _ in range(len(labels)):
                 total_examples += 1
                 if pred_labels[_] == labels[_]:
                     num_correct += 1
-                if labels[_] in largestindices[_,:]:
+                if labels[_] in largest10indices[_,:]:
                     top_10_num_correct += 1
+                truth =  tokens[labels[_]]
+                char_index = randrange(len(truth))
+                found_length = False
+                for _, index in enumerate(largest50indices):
+                    if isCorrectLength(truth, tokens[index]):
+                        if index == labels[_] and not found_length:
+                            if _ < 10:
+                                top_10_length_correct += 1
+                            top_50_length_correct += 1
+                        found_length = True
+                    if isCorrectChar(truth, tokens[index]):
+                        if index == labels[_]:
+                            if _ < 10:
+                                top_10_char_correct += 1
+                            top_50_char_correct += 1
+                        break
+
         accuracy = num_correct / total_examples
         top_10_accuracy = top_10_num_correct / total_examples
+        top_10_length_accuracy = top_10_length_correct / total_examples
+        top_10_char_accuracy = top_10_char_correct / total_examples
+        top_50_length_accuracy = top_50_length_correct / total_examples
+        top_50_char_accuracy = top_50_char_correct / total_examples
         print 'test accuracy: ', accuracy
         print 'top 10 accuracy: ', top_10_accuracy
+        print 'top 10 length accuracy: ', top_10_length_accuracy
+        print 'top 10 char accuracy: ', top_10_char_accuracy
+        print 'top 50 length accuracy: ', top_50_char_accuracy
+        print 'top 50 char accuracy: ', top_50_char_accuracy
+
         return accuracy, top_10_accuracy
