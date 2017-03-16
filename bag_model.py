@@ -38,7 +38,7 @@ class Config(object):
         self.eval_output = self.output_path + "results.txt"
         self.conll_output = self.output_path + "{}_predictions.conll".format('bag')
         self.log_output = self.output_path + "log"
-        self.saved_input = '/Users/virajmehta/Projects/backwards_dict/scr/bag/20170313_203006model.weights'
+        self.saved_input = '/home/toast/backwards_dict/results/bag/20170313_203006model.weights'
 
 
 

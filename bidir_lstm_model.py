@@ -25,7 +25,7 @@ logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
 class Config(object):
     max_length=40
     embed_size=50
-    lstm_dimension=200
+    lstm_dimension=300
     n_features=1
     n_epochs=200
     batch_size=64

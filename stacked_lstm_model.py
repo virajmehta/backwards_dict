@@ -25,7 +25,7 @@ logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
 
 class Config(object):
     max_length=40
-    embed_size=50
+    embed_size=300
     lstm_dimension=300
     n_features=1
     n_epochs=150
@@ -42,7 +42,7 @@ class Config(object):
         self.log_output = self.output_path + "log"
         self.summary_index = 0
         self.summary_path = self.output_path + 'summary'
-        self.saved_input = '/Users/virajmehta/Projects/backwards_dict/scr/bag/20170313_203006model.weights'
+        self.saved_input = '/home/toast/backwards_dict/results/stacked/20170314_062215model.weights'
 
 
 
