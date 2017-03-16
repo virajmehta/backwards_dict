@@ -16,6 +16,7 @@ from lstm_model import LSTMModel
 from lib.glove import loadWordVectors
 from lib.progbar import Progbar
 from data.wrapper_class import WrapperClass
+from test import top10, eval_test
 
 
 logger = logging.getLogger("stacked_lstm_model")
@@ -41,6 +42,7 @@ class Config(object):
         self.log_output = self.output_path + "log"
         self.summary_index = 0
         self.summary_path = self.output_path + 'summary'
+        self.saved_input = '/Users/virajmehta/Projects/backwards_dict/scr/bag/20170313_203006model.weights'
 
 
 
@@ -147,4 +149,23 @@ def main():
                     print_sentence(f, sentence, labels, predictions)
 
 if __name__=='__main__':
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-t', action='store_true')
+    parser.add_argument('--top10eval', action='store_true')
+    x = parser.parse_args()
+    config = Config()
+    embeddings, tokens = loadWordVectors()
+    config.embed_size = embeddings.shape[1]
+    config.vocab_size = len(tokens)
+    if x.t:
+        graph = tf.Graph()
+        with graph.as_default():
+            model = LSTMModel(config, embeddings, tokens)
+            top10(config, embeddings, tokens, model)
+    elif x.top10eval:
+        graph = tf.Graph()
+        with graph.as_default():
+            model = LSTMModel(config, embeddings, tokens)
+            eval_test(embeddings, tokens, model)
+    else:
+        main(config, embeddings, tokens)

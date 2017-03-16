@@ -3,6 +3,7 @@ import numpy as np
 import tensorflow as tf
 
 from data.wrapper_class import WrapperClass
+from lib.progbar import Progbar
 
 
 def top10(config, embeddings, tokens, model):
