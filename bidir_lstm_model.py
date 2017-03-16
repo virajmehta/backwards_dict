@@ -100,18 +100,24 @@ class BidirLSTMModel(Model):
         dropout_rate = self.dropout_placeholder
         fw_cell = tf.contrib.rnn.LSTMCell(Config.lstm_dimension)
         bw_cell = tf.contrib.rnn.LSTMCell(Config.lstm_dimension)
-        fw_multicell = tf.contrib.rnn.MultiRNNCell(fw_cell*num_layers)
-        bw_multicell = tf.contrib.rnn.MultiRNNCell(bw_cell*num_layers)
-        outputs, fw_state, bw_state = tf.nn.bidirectional_dynamic_rnn(fw_multicell, bw_multicell, x, dtype=tf.float32, sequence_length=self.length_placeholder)
+        fw_multicell = tf.contrib.rnn.MultiRNNCell([fw_cell]*num_layers)
+        bw_multicell = tf.contrib.rnn.MultiRNNCell([bw_cell]*num_layers)
+        outputs, states = tf.nn.bidirectional_dynamic_rnn(fw_multicell, bw_multicell, x, dtype=tf.float32, sequence_length=self.length_placeholder)
         # print tf.shape(fw_state)
         # print tf.shape(bw_state)
         U = tf.get_variable('U', (self.config.lstm_dimension, self.config.vocab_size),
                             initializer=tf.contrib.layers.xavier_initializer())
-        b2 = tf.get_variable('b2', (self.config.vocab_size))
+        b2 = tf.get_variable('b2', (self.config.vocab_size,1))
 
-        W = tf.get_variable("W",(self.config.vocab_size,2*self.config.vocab_size),initializer=tf.contrib.layers.xavier_initializer)
-
-        concat_states = tf.concat(0, [fw_state.c, bw_state.c])
+        W = tf.get_variable("W",(self.config.vocab_size,2*self.config.vocab_size),initializer=tf.contrib.layers.xavier_initializer())
+	fw_state, bw_state = states
+	
+	print fw_state[1].c
+	print bw_state[1].c
+	
+        concat_states = tf.stack([(fw_state[1]).c, (bw_state[1]).c])
+	concat_states = tf.reshape(concat_states,[-1,Config.lstm_dimension])
+	print concat_states
 
         # W: 0 dimension of forward state, 0 dimension of concat state (batch size by 2 batch size)
 
