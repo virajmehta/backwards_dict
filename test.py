@@ -98,28 +98,30 @@ def eval_test(embeddings, tokens, model):
             feed = model.create_feed_dict(inputs_batch1, length_batch=lengths,
                                          dropout=1)
             logits = sess.run([model.pred], feed_dict=feed)[0]
-            largest10indices = np.argpartition(logits, -10, axis=1)[:,-10:]
-            largest50indices = np.argpartition(logits, -10, axis=1)[:,-10:]
+            largest50indices = np.argpartition(logits, -50, axis=1)[:,-50:]
+            largest10indices = largest50indices[-10:]
             pred_labels = np.argmax(logits, axis=1)
             for _ in range(len(labels)):
+                largest50 = sorted(largest50indices[_,:], key=lambda idx:logits[_,idx])
+                largest10 = largest50[-10:]
+                truth =  model.backwards[labels[_]]
                 total_examples += 1
                 if pred_labels[_] == labels[_]:
                     num_correct += 1
-                if labels[_] in largest10indices[_,:]:
+                if labels[_] in largest10:
                     top_10_num_correct += 1
-                truth =  model.backwards[labels[_]]
                 char_index = randrange(len(truth))
                 found_length = False
-                for _, index in enumerate(largest50indices[_,:]):
+                for monkey, index in enumerate(largest50[::-1]):
                     if isCorrectLength(truth, model.backwards[index]):
                         if index == labels[_] and not found_length:
-                            if _ < 10:
+                            if monkey < 10:
                                 top_10_length_correct += 1
                             top_50_length_correct += 1
                         found_length = True
                     if isCorrectChar(truth, model.backwards[index], char_index):
                         if index == labels[_]:
-                            if _ < 10:
+                            if monkey < 10:
                                 top_10_char_correct += 1
                             top_50_char_correct += 1
                         break
