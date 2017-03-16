@@ -79,51 +79,36 @@ class BidirLSTMModel(LSTMModel):
         num_layers = 3
         x = self.add_embedding()
         dropout_rate = self.dropout_placeholder
-        with tf.name_scope('fwcell'):
-            fw_cell = tf.contrib.rnn.LSTMCell(Config.lstm_dimension)
-        with tf.name_scope('bwcell'):
-            bw_cell = tf.contrib.rnn.LSTMCell(Config.lstm_dimension)
-        with tf.name_scope('fwmulticell'):
-            fw_multicell = tf.contrib.rnn.MultiRNNCell([fw_cell]*num_layers)
-        with tf.name_scope('bwmulticell'):
-            bw_multicell = tf.contrib.rnn.MultiRNNCell([bw_cell]*num_layers)
-        with tf.name_scope('rnn'):
-            outputs, output_states = tf.nn.bidirectional_dynamic_rnn(fw_multicell, bw_multicell, x, dtype=tf.float32, sequence_length=self.length_placeholder)
-            tf.summary.histogram('outputs', outputs)
+	
+        fw_cell = tf.contrib.rnn.LSTMCell(Config.lstm_dimension)
+        bw_cell = tf.contrib.rnn.LSTMCell(Config.lstm_dimension)
+        fw_multicell = tf.contrib.rnn.MultiRNNCell([fw_cell]*num_layers)
+        bw_multicell = tf.contrib.rnn.MultiRNNCell([bw_cell]*num_layers)
+        outputs, output_states = tf.nn.bidirectional_dynamic_rnn(fw_multicell, bw_multicell, x, dtype=tf.float32, sequence_length=self.length_placeholder)
+            #tf.summary.histogram('outputs', outputs)
         fw_state, bw_state = output_states
         fw_state_last = fw_state[1].c
         bw_state_last = bw_state[1].c
         print fw_state_last.get_shape()
-        print fw_state_last
         concat_states = tf.concat([fw_state_last, bw_state_last], 1)
-        with tf.name_scope('U'):
-            U = tf.get_variable('U', (self.config.lstm_dimension, self.config.vocab_size),
+        U = tf.get_variable('U', (2*Config.lstm_dimension, self.config.vocab_size),
                             initializer=tf.contrib.layers.xavier_initializer())
-            tf.summary.histogram('U', U)
-        with tf.name_scope('b2'):
-            b2 = tf.get_variable('b2', (self.config.vocab_size))
-            tf.summary.histogram('b2', b2)
+        b2 = tf.get_variable('b2', (1,self.config.vocab_size))
+	b1 = tf.get_variable('b1',(Config.n_features * Config.embed_size, 1))
 
-        with tf.name_scope('W'):
-            W = tf.get_variable("W",(self.config.vocab_size,2*self.config.vocab_size),initializer=tf.contrib.layers.xavier_initializer)
-            tf.summary.histogram('W', W)
+        W = tf.get_variable("W",(Config.n_features * Config.embed_size,self.config.vocab_size),initializer=tf.contrib.layers.xavier_initializer())
 
 
         # W: 0 dimension of forward state, 0 dimension of concat state (batch size by 2 batch size)
 
-        with tf.name_scope('h'):
-            h = tf.nn.relu(tf.matmul(W,concat_states) + b2)
-            tf.summary.histogram('h', h)
-        # CONFUSED ABOUT W DIMENSIONS
-        #W = tf.Variable(initializer((Config.n_features * Config.embed_size, Config.vocab_size)))
-        #b1 = tf.Variable(tf.zeros([Config.vocab_size]))
+        h = tf.nn.relu(tf.matmul(concat_states,U) + b2)
 
-        #h = tf.nn.softmax(tf.matmul(x, W) + b1)
         h_drop = tf.nn.dropout(h, dropout_rate)
 
-        with tf.name_scope('pred'):
-            pred = tf.matmul(h_drop, U) + b2
-            tf.summary.histogram('pred', pred)
+
+        pred = tf.matmul(W,tf.transpose(h_drop)) + b1
+	pred = tf.transpose(pred)
+
         return pred
 
 
