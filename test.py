@@ -67,6 +67,8 @@ def eval_test(embeddings, tokens, model):
         top_10_char_correct = 0.0
         top_50_length_correct = 0.0
         top_50_char_correct = 0.0
+        if model.backwards is None:
+            model.backwards = dict((v, k) for k, v in model.tokens.iteritems())
         for _ in range(int(test.num_crossword_examples / model.config.batch_size)):
             batch = test.get_crossword_batch(dimensions=model.config.batch_size)
             inputs = []
@@ -105,17 +107,17 @@ def eval_test(embeddings, tokens, model):
                     num_correct += 1
                 if labels[_] in largest10indices[_,:]:
                     top_10_num_correct += 1
-                truth =  tokens[labels[_]]
+                truth =  model.backwards[labels[_]]
                 char_index = randrange(len(truth))
                 found_length = False
                 for _, index in enumerate(largest50indices):
-                    if isCorrectLength(truth, tokens[index]):
+                    if isCorrectLength(truth, model.backwards[index]):
                         if index == labels[_] and not found_length:
                             if _ < 10:
                                 top_10_length_correct += 1
                             top_50_length_correct += 1
                         found_length = True
-                    if isCorrectChar(truth, tokens[index]):
+                    if isCorrectChar(truth, model.backwards[index]):
                         if index == labels[_]:
                             if _ < 10:
                                 top_10_char_correct += 1
