@@ -91,23 +91,30 @@ class BidirLSTMModel(LSTMModel):
         fw_state_last = fw_state[1].c
         bw_state_last = bw_state[1].c
         concat_states = tf.concat([fw_state_last, bw_state_last], 1)
-        U = tf.get_variable('U', (2*Config.lstm_dimension, self.config.fc_size),
+        with tf.name_scope('U'):
+		U = tf.get_variable('U', (2*Config.lstm_dimension, self.config.fc_size),
                             initializer=tf.contrib.layers.xavier_initializer())
-        b2 = tf.get_variable('b2', (1,self.config.fc_size))
-        b1 = tf.get_variable('b1',(self.config.vocab_size))
-
-        W = tf.get_variable("W",(self.config.fc_size, self.config.vocab_size),initializer=tf.contrib.layers.xavier_initializer())
-
+        	tf.summary.histogram('U',U)
+	with tf.name_scope('b2'):
+		b2 = tf.get_variable('b2', (1,self.config.fc_size))
+        	tf.summary.histogram('b2',b2)
+	with tf.name_scope('b1'):
+		b1 = tf.get_variable('b1',(self.config.vocab_size))
+		tf.summary.histogram('b1',b1)
+	with tf.name_scope('W'):
+        	W = tf.get_variable("W",(self.config.fc_size, self.config.vocab_size),initializer=tf.contrib.layers.xavier_initializer())
+		tf.summary.histogram('W',W)
 
         # W: 0 dimension of forward state, 0 dimension of concat state (batch size by 2 batch size)
-
-        h = tf.nn.relu(tf.matmul(concat_states,U) + b2)
-
+	with tf.name_scope('h'):
+        	h = tf.nn.relu(tf.matmul(concat_states,U) + b2)
+		tf.summary.histogram('h',h)
+	
         h_drop = tf.nn.dropout(h, dropout_rate)
 
-
-        pred = tf.matmul(h_drop, W) + b1
-
+	with tf.name_scope('pred'):
+        	pred = tf.matmul(h_drop, W) + b1
+		tf.summary.histogram('pred',pred)
     
         return pred
 

@@ -102,23 +102,33 @@ class LSTMModel(Model):
         dropout_rate = self.dropout_placeholder
         cell = tf.contrib.rnn.LSTMCell(self.config.lstm_dimension)
         outputs, state = tf.nn.dynamic_rnn(cell, x, dtype=tf.float32, sequence_length=self.length_placeholder)
-        U = tf.get_variable('U', (self.config.lstm_dimension, self.config.embed_size),
+        with tf.name_scope('U'):
+		U = tf.get_variable('U', (self.config.lstm_dimension, self.config.embed_size),
                             initializer=tf.contrib.layers.xavier_initializer())
-        b1 = tf.get_variable('b1', (self.config.embed_size))
-        init = tf.cast(tf.transpose(tf.constant(self.pretrained_embeddings)), tf.float32)
-        W = tf.get_variable('W', initializer=init)
-        b2 = tf.get_variable('b2', (self.config.vocab_size))
-        # CONFUSED ABOUT W DIMENSIONS
+        	tf.summary.histogram('U',U)
+	with tf.name_scope('b1'):
+		b1 = tf.get_variable('b1', (self.config.embed_size))
+        	tf.summary.histogram('b1'b1)
+	init = tf.cast(tf.transpose(tf.constant(self.pretrained_embeddings)), tf.float32)
+        with tf.name_scope('W'):
+		W = tf.get_variable('W', initializer=init)
+        	tf.summary.histogram('W',W)
+	with tf.name_scope('b2'):
+		b2 = tf.get_variable('b2', (self.config.vocab_size))
+        	tf.summary.histogram('b2',b2)
+	# CONFUSED ABOUT W DIMENSIONS
         #W = tf.Variable(initializer((Config.n_features * Config.embed_size, Config.vocab_size)))
         #b1 = tf.Variable(tf.zeros([Config.vocab_size]))
 
         #h = tf.nn.softmax(tf.matmul(x, W) + b1)
         #h_drop = tf.nn.dropout(h, dropout_rate)
-
-        h1 = tf.nn.relu(tf.matmul(state.c, U) + b1)
-        h_drop = tf.nn.dropout(h1, dropout_rate)
-        pred = tf.matmul(h_drop, W) + b2
-
+	with tf.name_scope('h1'):
+        	h1 = tf.nn.relu(tf.matmul(state.c, U) + b1)
+        	tf.summary.histogram('h1',h1)
+	h_drop = tf.nn.dropout(h1, dropout_rate)
+        with tf.name_scope('pred'):
+		pred = tf.matmul(h_drop, W) + b2
+		tf.summary.histogram('pred',pred)
         return pred
 
     def add_loss_op(self, pred):
@@ -129,6 +139,7 @@ class LSTMModel(Model):
             tf.summary.scalar('ce',ce)
         with tf.name_scope('loss'):
             loss = tf.reduce_mean(ce)
+	    tf.summary.scalar('loss',loss)
         return loss
 
 
