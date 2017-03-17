@@ -1,0 +1,127 @@
+50d bag
+capital punishment
+top 10 guesses
+high
+lash
+ease
+capital
+jail
+penitentiary
+shush
+turmoil
+inner
+upper
+
+50d bag
+death penalty
+top 10 guesses
+death
+sin
+remission
+ill
+grievous
+punishment
+mortal
+guilty
+conviction
+child
+
+300d bag
+carving through snow
+top 10 guesses
+rosette
+carver
+craft
+wade
+hoop
+tsunami
+spend
+kraut
+shower
+avalanche
+
+300d bag
+carving snow
+top 10 guesses
+rosette
+ski
+totem
+carver
+craft
+flake
+shower
+pea
+septet
+tsunami
+
+300d bag
+stretch out on a sofa
+top 10 guesses
+nap
+divan
+sofa
+overstretch
+fade
+davenport
+term
+length
+execution
+loll
+
+50d bag
+stretch out on a sofa
+top 10 guesses
+fade
+nap
+term
+cloth
+length
+divan
+sofa
+flexible
+davenport
+relaxation
+
+300d LSTM
+stretch out on a sofa
+top 10 guesses
+rest
+couch
+nap
+chaise
+bed
+lounge
+loll
+dream
+sit
+eke
+
+300d stacked LSTM
+stretch out on a sofa
+top 10 guesses
+lounge
+loll
+couch
+rest
+nap
+sleep
+dream
+sit
+relax
+unwind
+
+300d bidirectional stacked LSTM
+stretch out on a sofa
+top 10 guesses
+rest
+lounge
+loll
+sofa
+relax
+splay
+sit
+lie
+nap
+sleep
+
+
