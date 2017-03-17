@@ -108,7 +108,7 @@ class LSTMModel(Model):
         	tf.summary.histogram('U',U)
 	with tf.name_scope('b1'):
 		b1 = tf.get_variable('b1', (self.config.embed_size))
-        	tf.summary.histogram('b1'b1)
+        	tf.summary.histogram('b1',b1)
 	init = tf.cast(tf.transpose(tf.constant(self.pretrained_embeddings)), tf.float32)
         with tf.name_scope('W'):
 		W = tf.get_variable('W', initializer=init)
