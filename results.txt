@@ -1,6 +1,8 @@
-Model Name;Test Accuracy;Top-10 Accuracy;Top-10 with Length;Top-10 with Char;Top-50 with Length;Top-50 with Char
-50d Stacked LSTM;0.069;0.085;0.104;0.107;0.132;0.135
-300d Stacked LSTM;0.337;0.563;0.449;0.558;0.628;0.631
-300d LSTM;0.255;0473;0.367;0.4570.533;0.542
-Bag of Vectors 300d;0.307;0.537;0.427;0.521;0.595;0.597
-Bidirectional Stacked LSTM;0.314;0.535;0.429;0.532;0.585;0.589
+Model Name;Test Accuracy;Top-10 Accuracy;Top-10 with Length;Top-10 with Char;Top-50 with Length;Top-50 with Char;Dictionary Test Accuracy
+50d Stacked LSTM;0.069;0.085;0.104;0.107;0.132;0.135;0.146
+300d Stacked LSTM;0.337;0.563;0.449;0.558;0.628;0.631;0.712
+50d LSTM;0.050;0.087;0.064;0.072;0.086;0.089;0.092
+300d LSTM;0.255;0473;0.367;0.4570.533;0.542;0.0.604
+Bag of Vectors 300d;0.307;0.537;0.427;0.521;0.595;0.597:0.545
+Bag of Vectors 50d;0.089;0.118;0.984;0.103;0.124;0.128;0.135
+Bidirectional Stacked LSTM;0.314;0.535;0.429;0.532;0.585;0.589;0.709
