@@ -28,7 +28,7 @@ class Config(object):
     embed_size=300
     lstm_dimension=300
     n_features=1
-    n_epochs=150
+    n_epochs=200
     batch_size=64
     dropout=0.5
     def __init__(self):
@@ -109,9 +109,7 @@ class StackedLSTMModel(LSTMModel):
         return pred
 
 
-def main():
-    config = Config()
-    embeddings, tokens = loadWordVectors()
+def main(config, embeddings, tokens):
     config.embed_size = embeddings.shape[1]
     config.vocab_size = len(tokens)
 
@@ -128,18 +126,15 @@ def main():
         model = StackedLSTMModel(config, embeddings, tokens)
         logger.info("took %.2f seconds", time.time() - start)
 
-        init = tf.global_variables_initializer()
 
-        writer = tf.summary.FileWriter('results/summary',graph)
+        model.writer = tf.summary.FileWriter(model.config.summary_path,graph)
         summary_op = tf.summary.merge_all()
+        init = tf.global_variables_initializer()
 
         with tf.Session() as session:
             session.run(init)
             saver = tf.train.Saver()
-            model.fit(session, saver)
-
-            summary = session.run(summary_op)
-            writer.add_summary(summary,0)
+            model.fit(session, saver,summary_op)
 
 
             with open(model.config.conll_output, 'w') as f:

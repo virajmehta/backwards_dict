@@ -18,29 +18,31 @@ from data.wrapper_class import WrapperClass
 from test import top10, eval_test
 
 
+k = 0
 logger = logging.getLogger("lstm_model")
 logger.setLevel(logging.DEBUG)
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
 
 class Config(object):
     max_length=40
-    embed_size=300
+    embed_size=50
     lstm_dimension=200
     n_features=1
-    n_epochs=200
+    n_epochs=1
     batch_size=64
     dropout=0.5
     def __init__(self):
         #self.cell = args.cell
 
         self.vocab_size = None
+        self.writer = None
         self.output_path = "results/{}/{:%Y%m%d_%H%M%S}".format('lstm', datetime.now())
         self.model_output = self.output_path + "model.weights"
         self.eval_output = self.output_path + "results.txt"
         self.conll_output = self.output_path + "{}_predictions.conll".format('lstm')
         self.log_output = self.output_path + "log"
         self.summary_path = self.output_path + 'summary'
-        self.saved_input = '/home/toast/backwards_dict/results/lstm/20170313_074349model.weights'
+        self.saved_input = '/home/toast/backwards_dict/results/lstm/20170306_060345model.weights'
 
 
 
@@ -136,7 +138,7 @@ class LSTMModel(Model):
         logits = pred
         with tf.name_scope('ce'):
             ce= tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels, logits=logits)
-            tf.summary.scalar('ce',ce)
+            tf.summary.histogram('ce',ce)
         with tf.name_scope('loss'):
             loss = tf.reduce_mean(ce)
 	    tf.summary.scalar('loss',loss)
@@ -146,7 +148,7 @@ class LSTMModel(Model):
     def add_training_op(self, loss):
         return tf.train.AdamOptimizer().minimize(loss)
 
-    def train_on_batch(self, sess, data, isCrossword):
+    def train_on_batch(self, sess, data, summary, isCrossword):
         inputs = []
         labels = []
         lengths = []
@@ -178,19 +180,22 @@ class LSTMModel(Model):
         length_batch = np.array(lengths)
         feed = self.create_feed_dict(inputs_batch1, labels_batch=labels_batch, length_batch=lengths,
                                      dropout=self.config.dropout)
+        global k
         try:
-            _, loss = sess.run([self.train_op, self.loss], feed_dict=feed)
+            _, loss, wot= sess.run([self.train_op, self.loss, summary], feed_dict=feed)
         except:
             import pdb; pdb.set_trace()
+        self.writer.add_summary(wot, k)
+        k += 1
         return loss
 
 
-    def run_epoch(self, sess):
+    def run_epoch(self, sess, summary):
         data = WrapperClass()
         prog = Progbar(target=1 + data.num_crossword_examples / self.config.batch_size)
         for _ in range(int(data.num_crossword_examples / self.config.batch_size)):
-            loss = self.train_on_batch(sess, data, True) #TODO
-            loss += self.train_on_batch(sess, data, False)
+            loss = self.train_on_batch(sess, data, summary, True) #TODO
+            loss += self.train_on_batch(sess, data, summary, False)
             prog.update(_ + 1, [("train loss", loss)])
             if self.report: self.report.log_train_loss(loss)
         print("")
@@ -248,12 +253,12 @@ class LSTMModel(Model):
         accuracy = num_correct / total_examples
         return accuracy
 
-    def fit(self, sess, saver):
+    def fit(self, sess, saver, summary):
         best_score = 0.
 
         for epoch in range(self.config.n_epochs):
             logger.info("Epoch %d out of %d", epoch + 1, self.config.n_epochs)
-            score = self.run_epoch(sess)
+            score = self.run_epoch(sess,summary)
             if score > best_score:
                 best_score = score
                 if saver:
