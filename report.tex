@@ -3,7 +3,7 @@
 \usepackage{hyperref}
 \usepackage{url}
 \usepackage{graphicx}
-\graphicspath{images/}
+\graphicspath{{images/}}
 %\documentstyle[nips13submit_09,times,art10]{article} % For LaTeX 2.09
 
 
@@ -116,7 +116,7 @@ For our vanilla LSTM model, we implement the most basic version of an LSTM in Te
 For a sample definition, “stretch out on a sofa,” for which the correct word is “loll,”, this model generates the following top 10 predictions: rest, couch, nap, chaise, bed, lounge, loll, dream, sit, and eke.
 While the top 10 predictions are capturing the target word, we can see that our model is generating words such as “couch,” “chaise,” and “bed,” which are similar to the noun “sofa,” but are not similar to the entire action of “stretch out on a sofa” as the other words are. To add more depth to our model such that it can account better for parts of speech, we will build a model with more layers, as discussed in the next section.
 
-\subusbsection{Stacked LSTM}
+\subsubsection{Stacked LSTM}
 
 This model is identical to the final version of our vanilla LSTM aside from the number of stacked layers used. Because stacked LSTM’s increase the number of layers that an LSTM has to learn information about its input, our hope in increasing the number of layers is that predicted words will account for parts of speech and tense in ways that our vanilla LSTM did not.
 The predictions for “stretch out on a sofa” for this model are as follows: lounge, loll, couch, rest, nap, sleep, dream, sit, relax, unwind.
@@ -142,13 +142,13 @@ We evaluate our models based on accuracy metrics that we calculate for all four 
 Our first accuracy metric is ratio of correctly predicted words to total number of input word definitions. We measure accuracy on both our dictionary test set and our crossword clues test set to keep the accuracies of the two applications of our models separate, as discussed in Section 3.
 
 \begin{figure}
-	\includegraphics{REAL_topdictdef}
+	\includegraphics{REAL_topdictdef.png}
 	\label{Fig 1}
 	\caption{Accuracy of top prediction for the true word corresponding to the dictionary definition.}
 \end{figure}
 
 \begin{figure}
-	\includegraphics{REAL_topcrossclue}
+	\includegraphics{REAL_topcrossclue.png}
 	\label{Fig 2}
 	\caption{Accuracy of top prediction for the true solution corresponding to the crossword clue.}
 \end{figure}
@@ -156,7 +156,7 @@ Our first accuracy metric is ratio of correctly predicted words to total number 
 Since these accuracy values are not very high for crossword clues, we then reveal the top 10 predicted words for crossword clues as opposed to simply the top predicted word for each definition, so that we can determine whether our model was in the ballpark for a larger number of words than it appeared. We redefine our accuracy metric to be the ratio of top 10 predicted words that contain the correct target word to the total number of input word definitions. The accuracies are as follows:
 
 \begin{figure}
-	\includegraphics{top10cross}
+	\includegraphics{top10cross.png}
 	\label{Fig 3}
 	\caption{Accuracy of top 10 predictions for the true solution corresponding to the crosswordclue.}
 \end{figure}
@@ -167,13 +167,13 @@ Provide a random character and its index from the correct word with the word def
 This approach results in the following accuracies for our crossword clue test set, where n=10:
 
 \begin{figure}
-	\includegraphics{top10len}
+	\includegraphics{top10len.png}
 	\label{Fig 4}
 	\caption{Accuracy of top the prediction for the true solution corresponding to the crossword clue given the true solution length.}
 \end{figure}
 
 \begin{figure}
-	\includegraphics{top10char}
+	\includegraphics{top10char.png}
 	\label{Fig 5}
 	\caption{Accuracy of the top prediction for the true solution corresponding to the crossword clue given a random character in the true solution.}
 \end{figure}
@@ -181,13 +181,13 @@ This approach results in the following accuracies for our crossword clue test se
 Since many of these accuracies were less than the top 10 general predictions, which was contrary to our hypothesis, we expanded our sample size to n=50 to improve our accuracy:
 
 \begin{figure}
-	\includegraphics{top50len}
+	\includegraphics{top50len.png}
 	\label{Fig 4}
 	\caption{Accuracy of the top prediction for the true solution corresponding to the crossword clue given the true solution length.}
 \end{figure}
 
 \begin{figure}
-	\includegraphics{top50char}
+	\includegraphics{top50char.png}
 	\label{Fig 6}
 	\caption{Accuracy of the top prediction for the true solution corresponding to the crossword clue given a random character in the true solution.}
 \end{figure}
@@ -199,7 +199,9 @@ Evidently, our model works better on dictionary definitions than on crossword cl
 
 \section{Conclusion}
 In designing and then in pursuing this project we were simultaneously pursuing a variety of goals. We succeeded to varying degrees in achieving them with the flexible architecture we pursued. In particular, we are pleased with our performance on the challenging problem of solving crossword clues without additional information, in which we vastly outperformed humans. The main takeaway of this result is that we have found a reasonable neural representation of the language which encodes the knowledge advantage a neural system gets in training. Colloquially, after feeding our network a dictionary, we can now be convinced of the digestive process as well.
+
 We are also pleased that our postfix modifications to include additional information provide modest increases in performance, to the point that it might be reasonable to expect our system to bootstrap itself into solving full crosswords. 
+
 While Hill et al achieved an accuracy of 0.89 on their dictionary definition-specific model and we only achieved 0.71 on our model for the reverse dictionary application, our model’s accuracy is likely lower because it includes crossword clues in the training set as well as dictionary definitions in order to accommodate the puzzle solver application of our model. Though our accuracy on dictionary clues is far from perfect, our example results show that the system is typically in the right ballpark on finding the word and might be useful for finding related words. 
 
 \subsection{Future Directions}
