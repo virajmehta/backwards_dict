@@ -1,6 +1,6 @@
 \documentclass{article} % For LaTeX2e
 \usepackage{nips13submit_e,times}
-\usepackage{biblatex}
+\usepackage[style=numeric]{biblatex}
 \usepackage{hyperref}
 \usepackage{url}
 \usepackage{graphicx}
@@ -33,12 +33,13 @@ Stanford University \\
 
 \newcommand{\fix}{\marginpar{FIX}}
 \newcommand{\new}{\marginpar{NEW}}
-\bibliography{paper/citations}
+\addbibresource{citations.bib}
 
 \nipsfinalcopy % Uncomment for camera-ready version
 
 \begin{document}
 
+\nocite{*}
 
 \maketitle
 
@@ -120,7 +121,7 @@ While the top 10 predictions are capturing the target word, we can see that our 
     \centering
         \includegraphics[width=100mm]{stacked_network.png}
         \caption{Fig 1: Model of our stacked LSTM model}
-\end{figre}
+\end{figure}
 
 This model is identical to the final version of our vanilla LSTM aside from the number of stacked layers used. Because stacked LSTM’s increase the number of layers that an LSTM has to learn information about its input, our hope in increasing the number of layers is that predicted words will account for parts of speech and tense in ways that our vanilla LSTM did not.
 The predictions for “stretch out on a sofa” for this model are as follows: lounge, loll, couch, rest, nap, sleep, dream, sit, relax, unwind.
@@ -222,14 +223,8 @@ final paper.
 
 \section*{References}
 
-References follow the acknowledgments. Use unnumbered third level heading for
-the references. Any choice of citation style is acceptable as long as you are
-consistent. It is permissible to reduce the font size to `small' (9-point) 
-when listing the references. {\bf Remember that this year you can use
-a ninth page as long as it contains \emph{only} cited references.}
 
 \small{
-\nocite{*}
     \printbibliography
 }
 
