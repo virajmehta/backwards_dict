@@ -126,6 +126,13 @@ While the top 10 predictions are capturing the target word, we can see that our 
 This model is identical to the final version of our vanilla LSTM aside from the number of stacked layers used. Because stacked LSTM’s increase the number of layers that an LSTM has to learn information about its input, our hope in increasing the number of layers is that predicted words will account for parts of speech and tense in ways that our vanilla LSTM did not.
 The predictions for “stretch out on a sofa” for this model are as follows: lounge, loll, couch, rest, nap, sleep, dream, sit, relax, unwind.
 We can see that these predictions are better than the vanilla LSTM in that they caption more actions as opposed to nouns similar to sofa. Rather than “chaise” and “bed,” we instead see “relax” and “unwind,” which are more similar in meaning to our definition. 
+Additionally, we can see that our loss converges relatively steadily for this model in the figure below.
+
+\begin{figure}
+    \centering
+        \includegraphics[width=50mm]{loss.png}
+        \caption{Fig 2: Loss of stacked LSTM model in tensorflow}
+\end{figure}
 
 \subsubsection{Bidirectional Stacked LSTM}
 To optimize our model further, we implement a bidirectional stacked LSTM so that our model would have more flexible input data. Since our problem is not chronologically limited and we have access to all words and definitions when building the model, bidirectionality will increase the amount of input information for each time step. Increasing the amount of data available for each prediction also helps introduce more context clues, which may help with distinguishing parts of speech and tense.  
