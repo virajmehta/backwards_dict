@@ -142,13 +142,15 @@ We evaluate our models based on accuracy metrics that we calculate for all four 
 Our first accuracy metric is ratio of correctly predicted words to total number of input word definitions. We measure accuracy on both our dictionary test set and our crossword clues test set to keep the accuracies of the two applications of our models separate, as discussed in Section 3.
 
 \begin{figure}
-	\includegraphics{REAL_topdictdef.png}
+    \centering
+	\includegraphics[width=50mm]{REAL_topdictdef.png}
 	\label{Fig 1}
 	\caption{Accuracy of top prediction for the true word corresponding to the dictionary definition.}
 \end{figure}
 
 \begin{figure}
-	\includegraphics{REAL_topcrossclue.png}
+    \centering
+	\includegraphics[width=50mm]{REAL_topcrossclue.png}
 	\label{Fig 2}
 	\caption{Accuracy of top prediction for the true solution corresponding to the crossword clue.}
 \end{figure}
@@ -156,7 +158,8 @@ Our first accuracy metric is ratio of correctly predicted words to total number 
 Since these accuracy values are not very high for crossword clues, we then reveal the top 10 predicted words for crossword clues as opposed to simply the top predicted word for each definition, so that we can determine whether our model was in the ballpark for a larger number of words than it appeared. We redefine our accuracy metric to be the ratio of top 10 predicted words that contain the correct target word to the total number of input word definitions. The accuracies are as follows:
 
 \begin{figure}
-	\includegraphics{top10cross.png}
+    \centering
+	\includegraphics[width=50mm]{top10cross.png}
 	\label{Fig 3}
 	\caption{Accuracy of top 10 predictions for the true solution corresponding to the crosswordclue.}
 \end{figure}
@@ -167,13 +170,15 @@ Provide a random character and its index from the correct word with the word def
 This approach results in the following accuracies for our crossword clue test set, where n=10:
 
 \begin{figure}
-	\includegraphics{top10len.png}
+    \centering
+	\includegraphics[width=50mm]{top10len.png}
 	\label{Fig 4}
 	\caption{Accuracy of top the prediction for the true solution corresponding to the crossword clue given the true solution length.}
 \end{figure}
 
 \begin{figure}
-	\includegraphics{top10char.png}
+    \centering
+	\includegraphics[width=50mm]{top10char.png}
 	\label{Fig 5}
 	\caption{Accuracy of the top prediction for the true solution corresponding to the crossword clue given a random character in the true solution.}
 \end{figure}
@@ -181,13 +186,15 @@ This approach results in the following accuracies for our crossword clue test se
 Since many of these accuracies were less than the top 10 general predictions, which was contrary to our hypothesis, we expanded our sample size to n=50 to improve our accuracy:
 
 \begin{figure}
-	\includegraphics{top50len.png}
+    \centering
+	\includegraphics[width=50mm]{top50len.png}
 	\label{Fig 4}
 	\caption{Accuracy of the top prediction for the true solution corresponding to the crossword clue given the true solution length.}
 \end{figure}
 
 \begin{figure}
-	\includegraphics{top50char.png}
+    \centering
+	\includegraphics[width=50mm]{top50char.png}
 	\label{Fig 6}
 	\caption{Accuracy of the top prediction for the true solution corresponding to the crossword clue given a random character in the true solution.}
 \end{figure}
@@ -225,7 +232,7 @@ when listing the references. {\bf Remember that this year you can use
 a ninth page as long as it contains \emph{only} cited references.}
 
 \small{
-
+    
 }
 
 \end{document}
