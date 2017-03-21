@@ -111,12 +111,17 @@ Additionally, we increase the dimensionality of our word vectors to 300 dimensio
 After implementing and studying results from the BOW model, which are discussed in the next section, we transition to building our LSTM models which we ideally want to result in stronger predictions. Our variables in these models are the dimensions of our word vectors, the number of LSTM stacked layers, and our regularization parameters to account for overfitting. 
 
 \subsubsection{Vanilla LSTM}
-For our vanilla LSTM model, we implement the most basic version of an LSTM in TensorFlow, represented in the figure below. Thus, it has only one layer, and uses 300-dimensional word vectors and a regularization parameter of 0.5 based on our results from the BOW model.
-
+For our vanilla LSTM model, we implement the most basic version of an LSTM in TensorFlow. Thus, it has only one layer, and uses 300-dimensional word vectors and a regularization parameter of 0.5 based on our results from the BOW model.
 For a sample definition, “stretch out on a sofa,” for which the correct word is “loll,”, this model generates the following top 10 predictions: rest, couch, nap, chaise, bed, lounge, loll, dream, sit, and eke.
 While the top 10 predictions are capturing the target word, we can see that our model is generating words such as “couch,” “chaise,” and “bed,” which are similar to the noun “sofa,” but are not similar to the entire action of “stretch out on a sofa” as the other words are. To add more depth to our model such that it can account better for parts of speech, we will build a model with more layers, as discussed in the next section.
 
 \subsubsection{Stacked LSTM}
+
+\begin{figure}
+    \centering
+        \includegraphics[width=100mm]{stacked_network.png}
+        \caption{Fig 1: Model of our stacked LSTM model}
+\end{figre}
 
 This model is identical to the final version of our vanilla LSTM aside from the number of stacked layers used. Because stacked LSTM’s increase the number of layers that an LSTM has to learn information about its input, our hope in increasing the number of layers is that predicted words will account for parts of speech and tense in ways that our vanilla LSTM did not.
 The predictions for “stretch out on a sofa” for this model are as follows: lounge, loll, couch, rest, nap, sleep, dream, sit, relax, unwind.
@@ -144,15 +149,13 @@ Our first accuracy metric is ratio of correctly predicted words to total number 
 \begin{figure}
     \centering
 	\includegraphics[width=50mm]{REAL_topdictdef.png}
-	\label{Fig 1}
-	\caption{Accuracy of top prediction for the true word corresponding to the dictionary definition.}
+	\caption{Fig. 2: Accuracy of top prediction for the true word corresponding to the dictionary definition.}
 \end{figure}
 
 \begin{figure}
     \centering
 	\includegraphics[width=50mm]{REAL_topcrossclue.png}
-	\label{Fig 2}
-	\caption{Accuracy of top prediction for the true solution corresponding to the crossword clue.}
+	\caption{Fig. 3: Accuracy of top prediction for the true solution corresponding to the crossword clue.}
 \end{figure}
 
 Since these accuracy values are not very high for crossword clues, we then reveal the top 10 predicted words for crossword clues as opposed to simply the top predicted word for each definition, so that we can determine whether our model was in the ballpark for a larger number of words than it appeared. We redefine our accuracy metric to be the ratio of top 10 predicted words that contain the correct target word to the total number of input word definitions. The accuracies are as follows:
@@ -160,8 +163,7 @@ Since these accuracy values are not very high for crossword clues, we then revea
 \begin{figure}
     \centering
 	\includegraphics[width=50mm]{top10cross.png}
-	\label{Fig 3}
-	\caption{Accuracy of top 10 predictions for the true solution corresponding to the crosswordclue.}
+	\caption{Fig. 4: Accuracy of top 10 predictions for the true solution corresponding to the crosswordclue.}
 \end{figure}
 
 These accuracy values are significantly better than the prior metric. We then see that adjusting our evaluation metrics can refine our model’s predictions better than adjusting our actual model can. For the crossword application of our model, we develop two new accuracy metrics to do so based on the extra information that is inherent to crosswords:
@@ -172,15 +174,13 @@ This approach results in the following accuracies for our crossword clue test se
 \begin{figure}
     \centering
 	\includegraphics[width=50mm]{top10len.png}
-	\label{Fig 4}
-	\caption{Accuracy of top the prediction for the true solution corresponding to the crossword clue given the true solution length.}
+	\caption{Fig. 5: Accuracy of top the prediction for the true solution corresponding to the crossword clue given the true solution length.}
 \end{figure}
 
 \begin{figure}
     \centering
 	\includegraphics[width=50mm]{top10char.png}
-	\label{Fig 5}
-	\caption{Accuracy of the top prediction for the true solution corresponding to the crossword clue given a random character in the true solution.}
+	\caption{Fig. 6: Accuracy of the top prediction for the true solution corresponding to the crossword clue given a random character in the true solution.}
 \end{figure}
 
 Since many of these accuracies were less than the top 10 general predictions, which was contrary to our hypothesis, we expanded our sample size to n=50 to improve our accuracy:
@@ -188,15 +188,13 @@ Since many of these accuracies were less than the top 10 general predictions, wh
 \begin{figure}
     \centering
 	\includegraphics[width=50mm]{top50len.png}
-	\label{Fig 4}
-	\caption{Accuracy of the top prediction for the true solution corresponding to the crossword clue given the true solution length.}
+	\caption{Fig. 7: Accuracy of the top prediction for the true solution corresponding to the crossword clue given the true solution length.}
 \end{figure}
 
 \begin{figure}
     \centering
 	\includegraphics[width=50mm]{top50char.png}
-	\label{Fig 6}
-	\caption{Accuracy of the top prediction for the true solution corresponding to the crossword clue given a random character in the true solution.}
+	\caption{Fig. 8: Accuracy of the top prediction for the true solution corresponding to the crossword clue given a random character in the true solution.}
 \end{figure}
 
 
