@@ -14,13 +14,13 @@ class WrapperClass:
         dict_file= None
         if dataset == 'train':
             crossword_file = 'train.txt'
-            dict_file = 'dict_train.txt'
+            dict_file = 'vocabulary.txt'
         elif dataset == 'dev':
             crossword_file = 'dev.txt'
             dict_file = 'dict_dev.txt'
         elif dataset == 'test':
             crossword_file = 'test.txt'
-            dict_file = 'dict_test.txt'
+            dict_file = 'merriam_webster.txt'
         with open(crossword_file, mode='r') as input_file:
             crossword_lines = list(input_file)
         rand.shuffle(crossword_lines)
