@@ -1,5 +1,6 @@
 \documentclass{article} % For LaTeX2e
 \usepackage{nips13submit_e,times}
+\usepackage{biblatex}
 \usepackage{hyperref}
 \usepackage{url}
 \usepackage{graphicx}
@@ -11,9 +12,7 @@
 
 
 \author{
-Viraj Mehta\thanks{ Use footnote for providing further information
-about author (webpage, alternative address)---\emph{not} for acknowledging
-funding agencies.} \\
+Viraj Mehta
 Department of Mathematics\\
 Stanford University\\
 \texttt{virajm@stanford.edu} \\
@@ -22,7 +21,6 @@ Meena Chetty \\
 Department of Computer Science \\
 Stanford University \\
 \texttt{mchetty@stanford.edu} \\
-(if needed)\\
 }
 
 % The \author macro works with any number of authors. There are two commands
@@ -35,6 +33,7 @@ Stanford University \\
 
 \newcommand{\fix}{\marginpar{FIX}}
 \newcommand{\new}{\marginpar{NEW}}
+\bibliography{paper/citations}
 
 \nipsfinalcopy % Uncomment for camera-ready version
 
@@ -232,7 +231,8 @@ when listing the references. {\bf Remember that this year you can use
 a ninth page as long as it contains \emph{only} cited references.}
 
 \small{
-    
+\nocite{*}
+    \printbibliography
 }
 
 \end{document}
